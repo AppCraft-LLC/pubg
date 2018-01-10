@@ -1,0 +1,44 @@
+body {
+    margin:0px;
+    color: white;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-size: 100%;
+    font-weight: 600;
+    -webkit-text-stroke: 1px rgb(70, 70, 70);
+    overflow:hidden;
+}
+
+#container {
+    width: 100%; 
+    height: 100vh; 
+    background-color: #48006b;
+}
+
+#float {
+    position:absolute; 
+    top:10pt; 
+    right: 10pt;
+}
+
+table {
+    background: rgba(255,255,255,0.5);
+}
+
+th {
+    color: white;
+    text-align: left;
+    padding: 2pt 5pt 2pt 5pt;
+}
+
+tr.dead {
+    color: lightgray;
+    -webkit-text-stroke: 1px rgb(104, 103, 103);
+}
+
+td.right {
+    text-align: right;
+}
+
+td {
+    padding: 2pt 5pt 2pt 5pt;
+}
