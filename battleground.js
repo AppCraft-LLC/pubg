@@ -36,7 +36,7 @@ const creatureMaxLives = [100.0, 150.0, 250.0],
       jumpEnergyCost = 30,
       eatBulletEnergyCost = 60,
 //
-      livesPerEatenBullet = 20;
+      livesPerEatenBullet = 40;
 
 
 let actions = { none: 0, move: 1, turn: 2, shoot: 3, jump: 4, eat: 5 },
@@ -89,7 +89,7 @@ function battleGround() {
           obstaclesDensity = 130, // 1 obj per 33k pixels
           maxAliveCreatures = 4,
           maxBulletsOnGround = 20,
-          summonInterval = 10, // 30
+          summonInterval = 20,
           summonCounter = 0,
           colors = [ { value: "#34A7D8", used: false } , 
                      { value: "#F04A50", used: false } , 
@@ -102,7 +102,7 @@ function battleGround() {
 
     // Energy refill speed
           energyRefillPerTick = 0.8,
-          bulletsGeneratorFrequency = 100,
+          bulletsGeneratorFrequency = 90,
 
     // IQ 
           decreaseIQByEnemy = 2,
@@ -260,8 +260,7 @@ function battleGround() {
     }
 
     function nextCreature() {
-        let alive = creatures.length;
-        if (alive >= maxAliveCreatures) return;
+        if (creatures.length >= maxAliveCreatures) return;
 
         // Check for alives
         creatures.forEach(c => {
@@ -297,7 +296,8 @@ function battleGround() {
 
     // 
     function newCreature(brainId) {
-
+        
+        if (creatures.length >= maxAliveCreatures) return;
         const id = `Brain_${brainId}`;
 
         // Delete code if exists
