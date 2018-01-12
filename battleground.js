@@ -34,7 +34,7 @@ const creatureMaxLives = [100.0, 150.0, 250.0],
 // Energy costs of actions
       shotEnergyCost = 10,
       jumpEnergyCost = 30,
-      eatBulletEnergyCost = 100,
+      eatBulletEnergyCost = 60,
 //
       livesPerEatenBullet = 20;
 
@@ -85,9 +85,10 @@ function battleGround() {
           widthHalf = width / 2,
           heightHalf = height / 2,
           dangerousBulletSpeed  = 5,
-          killsToLevelUp = [3, 10],
+          killsToLevelUp = [2, 4],
           obstaclesDensity = 130, // 1 obj per 33k pixels
-          maxAliveCreatures = 3,
+          maxAliveCreatures = 4,
+          maxBulletsOnGround = 20,
           summonInterval = 10, // 30
           summonCounter = 0,
           colors = [ { value: "#34A7D8", used: false } , 
@@ -532,7 +533,7 @@ function battleGround() {
 
         bulletsGeneratorCounter++;
         
-        if (bulletsGeneratorCounter > bulletsGeneratorFrequency) {
+        if (bulletsGeneratorCounter > bulletsGeneratorFrequency && bullets.length < maxBulletsOnGround) {
             bulletsGeneratorCounter = 0;
             const margin = creatureRad * 2;
             let x = randomInt(margin, width - margin),
@@ -753,7 +754,7 @@ function battleGround() {
                     fs = 14,
                     df = 4,
                     mh = fs * lc + df * (lc - 1);
-                x = it.body.position.x + offh * 1.0;
+                x = it.body.position.x + offh * 0.7; // 1.0
                 y = it.body.position.y - (lc == 1 ? 0 : mh / 2) + 10;
 
                 let max = 0,
