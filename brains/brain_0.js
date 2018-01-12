@@ -166,7 +166,7 @@ Brain_0 = {
      * };
      * 
      */
-    thinkAboutIt: function(self, enemies, bullets, objects) {
+    thinkAboutIt: function(self, enemies, bullets, objects, events) {
 
         let safeBullet, dangerousBullet;
         const max = ground.width + ground.height;
@@ -205,7 +205,7 @@ Brain_0 = {
 
         // Do nothing if there's no anyone else
         if (self.bullets < 1 || enemies.length < 1 ) {
-            return { do: actions.none };
+            return { do: actions.none, params: { message: "Yeahh" } };
         }
         else {
             // Check enough energy for hunting

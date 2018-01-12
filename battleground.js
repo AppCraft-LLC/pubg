@@ -40,8 +40,10 @@ const creatureMaxLives = [100.0, 150.0, 250.0],
 
 
 let actions = { none: 0, move: 1, turn: 2, shoot: 3, jump: 4, eat: 5 },
-    kinds = { rhino: 0, bear: 1, moose: 2, bull: 3 },
-    ground = { width: 0, height: 0 };
+    kinds = { rhino: 0, bear: 1, moose: 2, bull: 3, runchip: 4, miner: 5, sprayer: 6, splitpus: 7 },
+    ground = { width: 0, height: 0 },
+    events = { wound: 0, murder: 1, death: 2, upgrade: 3, birth: 4 },
+    engineRefExt;
 
 function battleGround() {
     
@@ -64,9 +66,10 @@ function battleGround() {
         brains = [],
         bulletsGeneratorCounter = 0,
         lastLoadedBrainId = -1,
-        scrVer = 0;
+        scrVer = 0,
+        happened = [];
 
-    const loopScale = 1.0;
+    const loopScale = 1;
           loopStep = 0.1 * loopScale;
           moveForce = -0.04 / loopScale,
           bulletForce = 15.5 / loopScale,
@@ -75,7 +78,7 @@ function battleGround() {
           isBullet = 3,
           creatureRad = 30,
           bulletRad = 5,
-          torqueForce = 0.7,
+          torqueForce = 0.4,
           container = document.getElementById("container"),
           width = container.clientWidth,
           height = container.clientHeight,
@@ -83,8 +86,10 @@ function battleGround() {
           heightHalf = height / 2,
           dangerousBulletSpeed  = 5,
           killsToLevelUp = [3, 10],
-          obstaclesDensity = 33, // 1 obj per 33k pixels
+          obstaclesDensity = 130, // 1 obj per 33k pixels
           maxAliveCreatures = 3,
+          summonInterval = 10, // 30
+          summonCounter = 0,
           colors = [ { value: "#34A7D8", used: false } , 
                      { value: "#F04A50", used: false } , 
                      { value: "#8FC703", used: false } , 
@@ -92,20 +97,25 @@ function battleGround() {
                      { value: "#FFD241", used: false } ],
           
     // Energy costs of actions
-          moveEnergyCost = 1.5,
+          moveEnergyCost = 1.0,
 
     // Energy refill speed
-          energyRefillPerTick = 0.5,
+          energyRefillPerTick = 0.8,
           bulletsGeneratorFrequency = 100,
 
     // IQ 
           decreaseIQByEnemy = 2,
           decreaseIQByIncident = 1,
-          increaseIQForKill = 2;
+          increaseIQForKill = 2,
+
+    // Messaging
+          messageLineLimit = 20,
+          messageShowTime = 3 * 1000;
 
     // create an engine
     let engine = Engine.create(),
         world = engine.world;
+    engineRefExt = engine;
 
     // create a renderer
     let render = Render.create({
@@ -141,7 +151,11 @@ function battleGround() {
         body: null,
         bullets: 1, //3,
         level: 0,
-        kills: 0
+        kills: 0,
+        cryToTheLeft: false,
+        message: null,
+        shouted: 0 // timestamp of the last shout
+        // message: "Привет!"
     };
 
     let Bullet = {
@@ -152,6 +166,11 @@ function battleGround() {
     let Obstacle = {
         body: null,
         kind: 0
+    };
+
+    let Event = {
+        type: 0,
+        payload: null 
     };
 
     function updateLeaderboard() {
@@ -216,10 +235,17 @@ function battleGround() {
         });
         Body.setAngle(body, randomAngle());
         creature.body = body;
+        creature.cryToTheLeft = Math.random() < 0.5;
         updateCreatureEmbodiment(creature);
         World.add(world, body);
 
         creatures.push(creature);
+
+        // Emit birth event
+        let event = Object.create(Event);
+        event.type = events.birth;
+        event.payload = [obfuscateCreature(creature)];
+        happened.push(event);
     }
 
     function afterCreatureBirth(success) {
@@ -230,16 +256,20 @@ function battleGround() {
         }
         if (!success) { lastLoadedBrainId = -1;}
         updateLeaderboard();
-        nextCreatureAfterAwile();
-    }
-
-    function nextCreatureAfterAwile() {
-        setTimeout(nextCreature, 3000);
     }
 
     function nextCreature() {
         let alive = creatures.length;
         if (alive >= maxAliveCreatures) return;
+
+        // Check for alives
+        creatures.forEach(c => {
+            if (c.brain.id == lastLoadedBrainId + 1) {
+                lastLoadedBrainId++;
+                nextCreature();
+                return;
+            }           
+        });        
 
         // Load existing dead brain
         if (lastLoadedBrainId < 0 && brains.length > 0) {
@@ -250,7 +280,7 @@ function battleGround() {
                 }
             }
         }
-        
+    
         newCreature(++lastLoadedBrainId);
     }
 
@@ -273,7 +303,11 @@ function battleGround() {
         let script = document.getElementById(id);
         if (script) {
             script.parentNode.removeChild(script);
-            delete(eval(id));
+            try {
+                delete(eval(id));
+            } catch (e) {
+                return;
+            }
         }
         
         // Create the new one
@@ -378,6 +412,11 @@ function battleGround() {
             creature.lives = creatureMaxLives[level];
             creature.energy = creatureMaxEnergy[level];
             updateCreatureEmbodiment(creature);
+            // Emit upgrade event
+            let event = Object.create(Event);
+            event.type = events.upgrade;
+            event.payload = [obfuscateCreature(creature)];
+            happened.push(event);            
         }
     }
 
@@ -387,11 +426,46 @@ function battleGround() {
         creature.body.render.sprite.texture = `./img/creatures/${creature.brain.kind}_${creature.level}_${health}.png`;
     }
 
+    function obfuscateCreature(c) {
+        if (c == null) return c;
+        return { id: c.body.id,
+                 author: c.brain.author,
+                 name: c.brain.name,
+                 lives: c.lives, 
+                 bullets: c.bullets,
+                 energy: c.energy,
+                 level: c.level, 
+                 position: c.body.position, 
+                 velocity: c.body.velocity, 
+                 angle: c.body.angle,
+                 speed: c.body.speed,
+                 angularVelocity: c.body.angularVelocity };
+    }
+
+    function obfuscateBullet(b) {
+        if (b == null) return b;
+        return { id: b.body.id,
+                 position: b.body.position,
+                 velocity: b.body.velocity,
+                 speed: b.body.speed,
+                 dangerous: b.body.speed >= dangerousBulletSpeed };
+    }
+
+    function obfuscateObstacle(o) {
+        if (o == null) return o;
+        return { id: o.body.id,
+                 position: o.body.position,
+                 velocity: o.body.velocity,
+                 speed: o.body.speed,
+                 bounds: o.body.bounds };
+    }
+
     // 
     Object.freeze(actions);
     Object.freeze(kinds);
     ground = { width: width, height: height };
     Object.freeze(ground);
+    Object.freeze(events);
     
     const blockMrg = 200,
           blockW = 100,
@@ -434,7 +508,13 @@ function battleGround() {
 
     // an example of using mouse events on a mouse
     Events.on(mouseConstraint, 'mousedown', function(event) {
-        // nextCreature();
+        if (creatures.length == 0) {
+            nextCreature();
+        }
+        else {
+            // console.log( creatures[0].body.bounds );
+            // console.log(rayBetweenPoints(creatures[0].body.position, mouseConstraint.mouse.position));
+        }
     });
 
     // to prevent dragging
@@ -464,36 +544,17 @@ function battleGround() {
         creatures.forEach(it => {
             it.energy += energyRefillPerTick;
             if (it.energy > creatureMaxEnergy[it.level]) it.energy = creatureMaxEnergy[it.level];
-            let enemy = { id: it.body.id,
-                          lives: it.lives, 
-                          bullets: it.bullets,
-                          energy: it.energy,
-                          level: it.level, 
-                          position: it.body.position, 
-                          velocity: it.body.velocity, 
-                          angle: it.body.angle,
-                          speed: it.body.speed,
-                          angularVelocity: it.body.angularVelocity };
-            enemies.push(enemy);
+            enemies.push(obfuscateCreature(it));
         });
 
         let bllts = [];
         bullets.forEach(it => {
-            let bullet = { id: it.body.id,
-                           position: it.body.position,
-                           velocity: it.body.velocity,
-                           speed: it.body.speed,
-                           dangerous: it.body.speed >= dangerousBulletSpeed };
-            bllts.push(bullet);
+            bllts.push(obfuscateBullet(it));
         });
         
         let obcls = [];
         obstacles.forEach(it => {
-            let obj = { id: it.body.id,
-                        position: it.body.position,
-                        velocity: it.body.velocity,
-                        speed: it.body.speed };
-            obcls.push(obj);
+            obcls.push(obfuscateObstacle(it));
         });
         
         // 
@@ -502,7 +563,7 @@ function battleGround() {
             let enemiesForIt = enemies.slice(0);
             enemiesForIt.splice(index, 1);
 
-            let action = it.brain.code.thinkAboutIt(enemies[index], enemiesForIt, bllts, obcls);
+            let action = it.brain.code.thinkAboutIt(enemies[index], enemiesForIt, bllts, obcls, happened);
             switch (action.do) {
                 case actions.move: 
                     move(it, action.params.angle);
@@ -521,8 +582,20 @@ function battleGround() {
                     break;                
                 default: break;
             }
+            happened = [];
+            if (action.params && action.params.message) {
+                let msg = action.params.message;
+                it.shouted = Date.now();
+                it.message = msg.length > messageLineLimit * 2 ? msg.substr(0, messageLineLimit * 2) : msg;
+            }
         });
 
+        // Summon new creature if needed 
+        if (summonCounter++ > summonInterval) {
+            summonCounter = 0;
+            if (creatures.length < maxAliveCreatures) nextCreature();
+        }
+        
     });
 
     // an example of using collisionStart event on an engine
@@ -546,20 +619,28 @@ function battleGround() {
 
                 if (blt.speed >= dangerousBulletSpeed) {
                     creature.lives -= bulletDamage;
+                    let shooter = bullet.shooter;
 
                     // Deadly shot
                     if (creature.lives <= 0) {
 
-                        let shooter = bullet.shooter;
+                        // Emit murder/death event 
+                        let event = Object.create(Event);
+                        event.payload = [obfuscateCreature(creature)];
+                        
                         if (shooter && shooter.body != creature.body) {
                             shooter.kills++;
                             shooter.brain.kills++;
                             shooter.brain.iq += increaseIQForKill;
                             updateCreatureLevel(shooter);
                             localStorage.setItem(`Brain_${shooter.brain.id}`, shooter.brain.iq);
+                            event.type = events.murder;
+                            event.payload.push(shooter);
                         } else {
                             shooter = null;
+                            event.type = events.death;
                         }
+                        happened.push(event);
 
                         creature.brain.iq -= shooter ? decreaseIQByEnemy : decreaseIQByIncident;
                         if (creature.brain.iq < 0) creature.brain.iq = 0;
@@ -569,39 +650,34 @@ function battleGround() {
                         
                         colors[creature.brain.color].used = false;
                         
-                        for (let i = 0; i < creatures.length; i++) {
-                            if (creatures[i].body == body) {
-                                let blts = creatures[i].bullets;
-                                let pos = body.position;
-                                creatures.splice(i, 1);
-                                Matter.Composite.remove(world, body);
-                                for (let i = 0; i < blts; i++) {
-                                    shot(pos, randomAngle(), null, false);
-                                }
-                                break;
-                            }
+                        let blts = creatures[i].bullets;
+                        let pos = body.position;
+                        Matter.Composite.remove(world, body);
+                        creatures.splice(creatures.indexOf(creature), 1);
+                        for (let i = 0; i < blts; i++) {
+                            shot(pos, randomAngle(), null, false);
                         }
 
                         updateLeaderboard();
-                        nextCreatureAfterAwile();
                     }
                     else {
+
+                        // Emit wound event
+                        let event = Object.create(Event);
+                        event.type = events.wound;
+                        event.payload = [obfuscateCreature(creature)];
+                        if (shooter) event.payload.push(obfuscateCreature(shooter));
+                        happened.push(event);
+
                         updateCreatureEmbodiment(creature);
                     }
                 }
                 else {
-
                     if (creature.bullets < creatureMaxBullets) {
-                        for (let i = 0; i < bullets.length; i++) {
-                            if (bullets[i].body == blt) {
-                                bullets.splice(i, 1);
-                                Matter.Composite.remove(world, blt);
-                                creature.bullets++;
-                                break;
-                            }
-                        }
+                        bullets.splice(bullets.indexOf(bullet), 1);
+                        Matter.Composite.remove(world, blt);
+                        creature.bullets++;
                     }   
-
                 }
             }
         }
@@ -645,9 +721,105 @@ function battleGround() {
             ctx.fillRect(x, y, w, h);
             ctx.fillStyle = "#2ABFFD";
             ctx.fillRect(x, y, it.bullets / creatureMaxBullets * w, h);
+
+            // Message
+            if (it.message) {
+
+                let lines = [];
+
+                if (it.message.length <= messageLineLimit) {
+                    lines.push(it.message);
+                }
+                else {
+                    let words = it.message.split(" "),
+                        line = "",
+                        wc = 0;
+                    for (let w = 0; w < words.length; w++) {
+                        let cl = line + words[w] + " ";
+                        wc++;
+                        if (cl.length >= messageLineLimit) {
+                            lines.push(wc == 1 ? cl.substr(0, messageLineLimit) : line.trim());
+                            line = wc == 1 ? "" : words[w] + " ";
+                            wc = 0;
+                        }
+                        else {
+                            line = cl;
+                        }
+                    }
+                    if (line.length) lines.push(line.trim());
+                } 
+
+                let lc = Math.min(lines.length, 2),
+                    fs = 14,
+                    df = 4,
+                    mh = fs * lc + df * (lc - 1);
+                x = it.body.position.x + offh * 1.0;
+                y = it.body.position.y - (lc == 1 ? 0 : mh / 2) + 10;
+
+                let max = 0,
+                    m = 6;
+                for (let i = 0; i < lc; i++) {
+                    let lw = ctx.measureText(lines[i]).width;
+                    if (lw > max) max = lw;
+                }
+
+                let rw = max + m * 2,
+                    xl = it.body.position.x - (rw + (x - it.body.position.x));
+                if (xl < 0 && it.cryToTheLeft) it.cryToTheLeft = false;
+                if (x + rw > ground.width && !it.cryToTheLeft) it.cryToTheLeft = true;
+                if (it.cryToTheLeft) x = xl;
+                let corners = it.cryToTheLeft ? { tl: 10, br: 10, bl: 10 } : { tr: 10, br: 10, bl: 10 };
+
+                ctx.strokeStyle = "#444444";
+                ctx.lineWidth = 0.5;
+                ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+                roundRect(ctx, x - m, y - m - fs / 2, rw, mh + m * 2, corners, true, true);
+
+                ctx.fillStyle = "#444444";
+                ctx.font = `100 ${fs}px Verdana`;
+                ctx.textBaseline = "middle";
+                for (let i = 0; i < lc; i++) {
+                    ctx.fillText(lines[i], x, y);
+                    y += fs + df;
+                }
+
+                //
+                if (Date.now() - it.shouted > messageShowTime) it.message = null;
+            }
         });
 
     });
+
+    // Draw functions
+    function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
+        if (typeof stroke == 'undefined') {
+            stroke = true;
+        }
+        if (typeof radius === 'undefined') {
+            radius = 5;
+        }
+        if (typeof radius === 'number') {
+            radius = {tl: radius, tr: radius, br: radius, bl: radius};
+        } else {
+            let defaultRadius = {tl: 0, tr: 0, br: 0, bl: 0};
+            for (let side in defaultRadius) {
+                radius[side] = radius[side] || defaultRadius[side];
+            }
+        }
+        ctx.beginPath();
+        ctx.moveTo(x + radius.tl, y);
+        ctx.lineTo(x + width - radius.tr, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + radius.tr);
+        ctx.lineTo(x + width, y + height - radius.br);
+        ctx.quadraticCurveTo(x + width, y + height, x + width - radius.br, y + height);
+        ctx.lineTo(x + radius.bl, y + height);
+        ctx.quadraticCurveTo(x, y + height, x, y + height - radius.bl);
+        ctx.lineTo(x, y + radius.tl);
+        ctx.quadraticCurveTo(x, y, x + radius.tl, y);
+        ctx.closePath();
+        if (fill) ctx.fill();
+        if (stroke) ctx.stroke();
+    }
 
     // run the engine
     Engine.run(engine);
@@ -717,8 +889,6 @@ function battleGround() {
         updateCreatureEmbodiment(creature);
     }
 
-    nextCreatureAfterAwile();
-
 }
 
 // Common helpers
@@ -767,4 +937,14 @@ function randomInt(min, max) {
 
 function randomAngle() {
     return Math.random() * Math.PI * 2;
+}
+
+function rayBetween(obj1, obj2) {
+    return rayBetweenPoints(obj1.position, obj2.position);
+}
+
+function rayBetweenPoints(pt1, pt2) {
+    let bodies = Matter.Composite.allBodies(engineRefExt.world),
+        collisions = Matter.Query.ray(bodies, pt1, pt2);
+    return collisions.length < 3;
 }

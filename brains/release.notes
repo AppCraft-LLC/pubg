@@ -1,0 +1,52 @@
+
+---------------
+Release notes
+---------------
+
+--- v. 1.1, 12/01/2018 ---
+
+• Messages added. To should add {message} parameter to the {params} field of the action structure. 
+    E.g. { do: actions.none, params: { message: "Yeahh" } }
+The message will be immediately displayed for 3 seconds. Each message can contain up to 2 lines of 20 chars in each.
+
+• Events added. {thinkAboutIt} function must contain {events} param:
+    thinkAboutIt: function(self, enemies, bullets, objects, events) {}
+Event has the following structure: 
+    Event = {
+        type: 0,
+        payload: null 
+    };
+Possible types are:
+    events = { wound: 0, murder: 1, death: 2, upgrade: 3, birth: 4 }
+Payload is an array witch contains one or more objects.
+Payload of {wound} and {murder} events contains 2 entities: an object and a subject. An object always is first.
+For example {wound} event can be: 
+    event = {
+        type: events.wound,
+        payload: [ obj1, obj2 ]
+    };
+Where {obj1} is the creature who was hurted and {obj2} is the creature who hurted {obj1} creature.
+Payload of other events contains only 1 entity, the creature who upgraded, died or was born.
+
+• Added {name} and {author} fields to the creature struct.
+
+• Added {bounds} field to the object struct. It contains AABB region of an object with the following format:
+    bounds = {
+        min: { x: 0,  y: 0 },
+        max: { x: 10, y: 10 }
+    };
+Where {min} is the left top corner of the region and {max} is the bottom right corner.
+
+• Added {rayBetween(obj1, obj2)} helper function. It can determine line visibility of two objects. 
+Returns {true} or {false}. {True} means objects are visible to each other, {false} otherwise.
+
+• New kinds of creatures added, now they are: 
+    kinds = { rhino: 0, bear: 1, moose: 2, bull: 3, runchip: 4, miner: 5, sprayer: 6, splitpus: 7 },
+
+• Energy refills 60% faster.
+
+• Bugfixes.
+
+
+
+
