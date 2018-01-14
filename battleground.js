@@ -25,21 +25,7 @@
 //  THE SOFTWARE.
 //
 
-// Lives amount for each of possible levels
-const creatureMaxLives = [100.0, 150.0, 250.0],
-// Energy amount for each level
-      creatureMaxEnergy = [100.0, 150.0, 250.0],
-      creatureMaxBullets = 3,
-      bulletDamage = 10,
-// Energy costs of actions
-      shotEnergyCost = 10,
-      jumpEnergyCost = 30,
-      eatBulletEnergyCost = 60,
-//
-      livesPerEatenBullet = 40;
-
-
-let actions = { none: 0, move: 1, turn: 2, shoot: 3, jump: 4, eat: 5 },
+let actions = { none: 0, move: 1, rotate: 2, turn: 3, shoot: 4, jump: 5, eat: 6 },
     kinds = { rhino: 0, bear: 1, moose: 2, bull: 3, runchip: 4, miner: 5, sprayer: 6, splitpus: 7 },
     ground = { width: 0, height: 0 },
     events = { wound: 0, murder: 1, death: 2, upgrade: 3, birth: 4 },
@@ -65,20 +51,20 @@ function battleGround() {
         loopCounter = -1,
         brains = [],
         bulletsGeneratorCounter = 0,
-        lastLoadedBrainId = -1,
+        lastActivatedBrainId = -1,
         scrVer = 0,
-        happened = [];
+        happened = [],
+        summonCounter = 0;
 
-    const loopScale = 1;
-          loopStep = 0.1 * loopScale;
-          moveForce = -0.04 / loopScale,
-          bulletForce = 15.5 / loopScale,
-          jumpForce = -0.1 / loopScale,
+    const loopStep = 0.1,
+          moveForce = -0.04,
+          bulletForce = 15.5,
+          jumpForce = -0.1,
+          torqueForce = 0.5,
           isCreature = 2,
           isBullet = 3,
           creatureRad = 30,
           bulletRad = 5,
-          torqueForce = 0.4,
           container = document.getElementById("container"),
           width = container.clientWidth,
           height = container.clientHeight,
@@ -87,15 +73,9 @@ function battleGround() {
           dangerousBulletSpeed  = 5,
           killsToLevelUp = [2, 4],
           obstaclesDensity = 130, // 1 obj per 33k pixels
-          maxAliveCreatures = 4,
+          maxAliveCreatures = 3, // 4
           maxBulletsOnGround = 20,
           summonInterval = 20,
-          summonCounter = 0,
-          colors = [ { value: "#34A7D8", used: false } , 
-                     { value: "#F04A50", used: false } , 
-                     { value: "#8FC703", used: false } , 
-                     { value: "#BA21F8", used: false } , 
-                     { value: "#FFD241", used: false } ],
           
     // Energy costs of actions
           moveEnergyCost = 1.0,
@@ -103,11 +83,6 @@ function battleGround() {
     // Energy refill speed
           energyRefillPerTick = 0.8,
           bulletsGeneratorFrequency = 90,
-
-    // IQ 
-          decreaseIQByEnemy = 2,
-          decreaseIQByIncident = 1,
-          increaseIQForKill = 2,
 
     // Messaging
           messageLineLimit = 20,
@@ -133,16 +108,16 @@ function battleGround() {
 
     // Prototypes
     let Brain = {
-        id: 0,
+        id: "",
         author: "",
         name: "",
         kind: 0,
         kills: 0,
         deaths: 0,
         iq: 10,
-        alive: true,
+        alive: false,
         code: null,
-        color: 0
+        color: ""
     }
 
     let Creature = {
@@ -173,6 +148,84 @@ function battleGround() {
         type: 0,
         payload: null 
     };
+
+    function rainbow(numOfSteps, step) {
+        let r, g, b,
+            h = step / numOfSteps,
+            i = ~~(h * 6),
+            f = h * 6 - i,
+            q = 1 - f;
+        switch(i % 6) {
+            case 0: r = 1; g = f; b = 0; break;
+            case 1: r = q; g = 1; b = 0; break;
+            case 2: r = 0; g = 1; b = f; break;
+            case 3: r = 0; g = q; b = 1; break;
+            case 4: r = f; g = 0; b = 1; break;
+            case 5: r = 1; g = 0; b = q; break;
+        }
+        let c = "#" + ("00" + (~ ~(r * 255)).toString(16)).slice(-2) + ("00" + (~ ~(g * 255)).toString(16)).slice(-2) + ("00" + (~ ~(b * 255)).toString(16)).slice(-2);
+        return (c);
+    }
+
+    // Load config
+    if (typeof cfg_sources === 'undefined') {
+        console.error("config.js not found.");
+        return;
+    }
+    if (cfg_sources.length < 3) {
+        console.error("At least 3 brains needed to start the game. Otherwise it won't be fun enough.");
+        return;
+    }
+    if (cfg_sources.length < maxAliveCreatures) {
+        console.error("Not enough brains for specified maxAliveCreatures const.");
+        return;
+    }
+
+    let loadedBrainsCount = 0;
+
+    function sourceLoaded() {
+        loadedBrainsCount++;
+        if (loadedBrainsCount == cfg_sources.length) assembleBrains();
+    }
+
+    function assembleBrains() {
+
+        for (let i = 0; i < cfg_sources.length; i++) {
+            
+            let filename = cfg_sources[i],
+                type = filename.substr(0, filename.length - 3);
+
+            let code = Object.create(eval(type)),
+                brain = Object.create(Brain);
+            brain.id = type;
+            brain.author = code.author.length > 10 ? code.author.substr(0, 10) : code.author;
+            brain.name = code.name.length > 10 ? code.name.substr(0, 10) : code.name;
+            brain.kind = code.kind;
+            brain.code = code;
+            brain.color = rainbow(cfg_sources.length, i);
+            
+            let iq = localStorage.getItem(brain.id);
+            if (iq) brain.iq = parseInt(iq);
+            brains.push(brain);
+        };
+
+        // Start the game after loading all brains
+        letTheBattleBegin();
+    }
+
+    cfg_sources.forEach(filename => {
+        if (!(filename.includes("br_") && filename.includes(".js"))) {
+            console.error(filename, " filename has invalid format.");
+            return;    
+        }
+        let script = document.createElement('script');
+        script.src = `./brains/${filename}`;
+        script.onload = sourceLoaded;
+        script.onerror = function () {
+            console.error("Error loading brain.");
+        };
+        document.body.appendChild(script);
+    });
 
     function updateLeaderboard() {
         let table = document.getElementById("leaderboard"),
@@ -207,22 +260,24 @@ function battleGround() {
             row.cells[4].innerHTML = `${item.iq}`;
             if (item.alive) {
                 row.classList.remove("dead");
-                let c = colors[item.color].value;
+                let c = item.color;
                 row.style.color = c;
-                row.style.webkitTextStroke = `1px ${Common.shadeColor(c, -40)}`;
+                row.style.webkitTextStroke = `0.5px ${Common.shadeColor(c, -40)}`;
             } else {
                 row.style.color = null;
                 row.style.webkitTextStroke = null;
                 row.classList.add("dead");
             }
         }
-
     }
     
-    function incarnateCreatureForBrain(brain) {
+    function incarnateCreatureForBrain(brainId) {
+
         // Give birth to a creature
-        let creature = Object.create(Creature);
+        let creature = Object.create(Creature),
+            brain = brains[brainId];
         creature.brain = brain;
+        brain.alive = true;
 
         // Make a body
         const margin = creatureRad * 2;
@@ -241,6 +296,7 @@ function battleGround() {
         World.add(world, body);
 
         creatures.push(creature);
+        updateLeaderboard();
 
         // Emit birth event
         let event = Object.create(Event);
@@ -249,113 +305,35 @@ function battleGround() {
         happened.push(event);
     }
 
-    function afterCreatureBirth(success) {
-        // Prevent infinite loading loop
-        if (!success && brains.length < 3) {
-            console.log("At least 3 brains needed to start a game. Otherwise it won't be fun enough.");
-            return;
+    function nextDeadBrainFromId(id) {  
+        let found = -1;
+        if (id >= brains.length) return found;
+        for (let i = id; i < brains.length; i++) {
+            if (!brains[i].alive) {
+                found = i;
+                break;
+            }
         }
-        if (!success) { lastLoadedBrainId = -1;}
-        updateLeaderboard();
+        return found;
     }
 
     function nextCreature() {
+
         if (creatures.length >= maxAliveCreatures) return;
 
-        // Check for alives
-        creatures.forEach(c => {
-            if (c.brain.id == lastLoadedBrainId + 1) {
-                lastLoadedBrainId++;
-                nextCreature();
-                return;
-            }           
-        });        
-
-        // Load existing dead brain
-        if (lastLoadedBrainId < 0 && brains.length > 0) {
-            for (let i = 0; i < brains.length; i++) {
-                if (!brains[i].alive) {
-                    lastLoadedBrainId = brains[i].id - 1;
-                    break;
-                }
-            }
+        let nextId = nextDeadBrainFromId(lastActivatedBrainId + 1);
+        if (nextId < 0) {
+            lastActivatedBrainId = -1;
+            nextId = nextDeadBrainFromId(0);
         }
-    
-        newCreature(++lastLoadedBrainId);
-    }
 
-    function unusedColor() {
-        for (let i = 0; i < colors.length; i++) {
-            if (!colors[i].used) {
-                colors[i].used = true;
-                return i;
-            }
+        if (nextId < 0) {
+            console.error("Error loading next brain.");
+            return;
         }
-        return 0;
-    }
 
-    // 
-    function newCreature(brainId) {
-        
-        if (creatures.length >= maxAliveCreatures) return;
-        const id = `Brain_${brainId}`;
-
-        // Delete code if exists
-        let script = document.getElementById(id);
-        if (script) {
-            script.parentNode.removeChild(script);
-            try {
-                delete(eval(id));
-            } catch (e) {
-                return;
-            }
-        }
-        
-        // Create the new one
-        script = document.createElement('script');
-        script.src = `./brains/brain_${brainId}.js?v=${scrVer}`;
-        scrVer++;
-        script.setAttribute("id", id);
-        script.onload = function() {
-
-            // Check brain already loaded
-            let brain,
-                old = false;
-            brains.forEach(br => {
-                if (br.id == brainId) brain = br;
-            });
-            if (brain != null) {
-                old = true;
-                brain.alive = true;
-            } else {
-                brain = Object.create(Brain);
-                brain.id = brainId;    
-            }
-
-            // Create brain
-            let code = Object.create(eval(id));
-            brain.author = code.author.length > 10 ? code.author.substr(0, 10) : code.author;
-            brain.name = code.name.length > 10 ? code.name.substr(0, 10) : code.name;
-            brain.kind = code.kind;
-            brain.code = code;
-            brain.color = unusedColor();
-            
-            if (!old) {
-                let iq = localStorage.getItem(id);
-                if (iq) brain.iq = parseInt(iq);
-                brains.push(brain);
-            }  
-
-            incarnateCreatureForBrain(brain);
-            afterCreatureBirth(true);
-        };
-
-        // script.onreadystatechange = onLoad;
-        script.onerror = function () {
-            afterCreatureBirth(false);
-        };
-
-        document.body.appendChild(script);
+        lastActivatedBrainId = nextId;
+        incarnateCreatureForBrain(nextId);
     }
 
     function newObstacle(kind) {
@@ -430,6 +408,9 @@ function battleGround() {
     function obfuscateCreature(c) {
         if (c == null) return c;
         return { id: c.body.id,
+                 kills: c.brain.kills,
+                 deaths: c.brain.deaths,
+                 iq: c.brain.iq,
                  author: c.brain.author,
                  name: c.brain.name,
                  lives: c.lives, 
@@ -459,6 +440,57 @@ function battleGround() {
                  velocity: o.body.velocity,
                  speed: o.body.speed,
                  bounds: o.body.bounds };
+    }
+
+    /**
+     * Calculates new IQ values for victim and killer
+     * @param victim Brain object of victim
+     * @param killer Brain object of killer
+     */
+    function calculateIQForVictimAndKiller(victim, killer) {
+
+        safeIQDecreaseBy = function(brain, value) {
+            brain.iq -= value;
+            if (brain.iq < 0) brain.iq = 0;
+        }
+
+        saveToLocalStorage = function() {
+            localStorage.setItem(victim.id, victim.iq);
+            if (killer) localStorage.setItem(killer.id, killer.iq);
+        }
+
+        if (victim == null) return;
+        if (killer == null) {
+            safeIQDecreaseBy(victim, 3);
+            saveToLocalStorage();
+            return;
+        }
+        let killerIQ = killer.iq,
+            victimIQ = victim.iq;
+        if (killerIQ >= victimIQ) {
+            if (killerIQ - victimIQ > 10) {
+            }
+            else {
+                killer.iq++;
+                safeIQDecreaseBy(victim, 1);
+            }
+        }
+        else {
+            if (victimIQ - killerIQ > 10) {
+                let diff = victimIQ - killerIQ;
+                safeIQDecreaseBy(victim, Math.round(diff/5));
+                killer.iq += Math.round(diff/3);
+            }
+            else {
+                killer.iq++;
+                safeIQDecreaseBy(victim, 1);
+            }
+        }
+        saveToLocalStorage();
+    }
+
+    function isNumber(n) {
+        return !isNaN(parseFloat(n)) && isFinite(n);
     }
 
     // 
@@ -500,22 +532,18 @@ function battleGround() {
                 }
             }
         });
-    mouseConstraint.collisionFilter.mask = 0;
-
+    // mouseConstraint.collisionFilter.mask = 0;
     World.add(world, mouseConstraint);
-
-    // keep the mouse in sync with rendering
     render.mouse = mouse;
 
     // an example of using mouse events on a mouse
     Events.on(mouseConstraint, 'mousedown', function(event) {
-        if (creatures.length == 0) {
-            nextCreature();
-        }
-        else {
-            // console.log( creatures[0].body.bounds );
-            // console.log(rayBetweenPoints(creatures[0].body.position, mouseConstraint.mouse.position));
-        }
+        // if (creatures.length == 0) {
+            // nextCreature();
+        // }
+        // else {
+            // mpoint = mouseConstraint.mouse.position;
+        // }
     });
 
     // to prevent dragging
@@ -569,8 +597,11 @@ function battleGround() {
                 case actions.move: 
                     move(it, action.params.angle);
                     break;
-                case actions.turn:
+                case actions.rotate:
                     torque(it, action.params.clockwise);
+                    break;          
+                case actions.turn:
+                    turnToAngle(it, action.params.angle);
                     break;                    
                 case actions.shoot:
                     shoot(it);
@@ -580,7 +611,7 @@ function battleGround() {
                     break;    
                 case actions.eat:
                     eatBullet(it);
-                    break;                
+                    break;      
                 default: break;
             }
             happened = [];
@@ -621,6 +652,7 @@ function battleGround() {
                 if (blt.speed >= dangerousBulletSpeed) {
                     creature.lives -= bulletDamage;
                     let shooter = bullet.shooter;
+                    if (shooter && shooter.body == creature.body) shooter = null;
 
                     // Deadly shot
                     if (creature.lives <= 0) {
@@ -632,33 +664,27 @@ function battleGround() {
                         if (shooter && shooter.body != creature.body) {
                             shooter.kills++;
                             shooter.brain.kills++;
-                            shooter.brain.iq += increaseIQForKill;
                             updateCreatureLevel(shooter);
-                            localStorage.setItem(`Brain_${shooter.brain.id}`, shooter.brain.iq);
                             event.type = events.murder;
                             event.payload.push(shooter);
                         } else {
-                            shooter = null;
                             event.type = events.death;
                         }
                         happened.push(event);
 
-                        creature.brain.iq -= shooter ? decreaseIQByEnemy : decreaseIQByIncident;
-                        if (creature.brain.iq < 0) creature.brain.iq = 0;
-                        creature.brain.deaths++;
-                        creature.brain.alive = false;
-                        localStorage.setItem(`Brain_${creature.brain.id}`, creature.brain.iq);
-                        
-                        colors[creature.brain.color].used = false;
-                        
-                        let blts = creatures[i].bullets;
-                        let pos = body.position;
+                        let brain = creature.brain,
+                            blts = creature.bullets,
+                            pos = body.position;
                         Matter.Composite.remove(world, body);
                         creatures.splice(creatures.indexOf(creature), 1);
                         for (let i = 0; i < blts; i++) {
                             shot(pos, randomAngle(), null, false);
                         }
 
+                        brain.deaths++;
+                        brain.alive = false;
+                        calculateIQForVictimAndKiller(brain, shooter ? shooter.brain : null);
+                
                         updateLeaderboard();
                     }
                     else {
@@ -698,7 +724,7 @@ function battleGround() {
                 sh = s + dh * 4,
                 x = it.body.position.x - wh + sh / 2,
                 y = it.body.position.y - offh,
-                color = colors[it.brain.color].value;
+                color = it.brain.color;
             // Color
             ctx.fillStyle = color;
             ctx.fillRect(x - sh, y, s, s);
@@ -822,12 +848,10 @@ function battleGround() {
         if (stroke) ctx.stroke();
     }
 
-    // run the engine
-    Engine.run(engine);
-
-    // run the renderer
-    Render.run(render);
-
+    function letTheBattleBegin() {
+        Engine.run(engine);
+        Render.run(render);
+    }
 
     // Action functions
     function shot(pos, angle, shooter, dry) {
@@ -853,11 +877,15 @@ function battleGround() {
     }
 
     function move(creature, angle) {
+        if (!isNumber(angle)) return;
         if (creature.energy < moveEnergyCost) return;
-        creature.energy -= moveEnergyCost;        
-        let body = creature.body;
-        Body.applyForce(body, { x: body.position.x + Math.cos(body.angle) * creatureRad, y: body.position.y + Math.sin(body.angle) * creatureRad }, 
-            { x: Math.cos(angle) * moveForce, y: Math.sin(angle) * moveForce });
+        creature.energy -= moveEnergyCost;
+        let body = creature.body,
+            point = { x: body.position.x + Math.cos(body.angle) * creatureRad, 
+                      y: body.position.y + Math.sin(body.angle) * creatureRad },
+            vector = { x: Math.cos(angle + Math.PI) * moveForce, 
+                       y: Math.sin(angle + Math.PI) * moveForce };
+        Body.applyForce(body, point, vector);
     }
 
     function shoot(creature) { 
@@ -865,19 +893,30 @@ function battleGround() {
         if (creature.energy < shotEnergyCost) return;
         creature.bullets--;
         creature.energy -= shotEnergyCost;
-        let body = creature.body;
-        shot({ x: body.position.x + Math.cos(body.angle) * (creatureRad + bulletRad * 2.0), 
-               y: body.position.y + Math.sin(body.angle) * (creatureRad + bulletRad * 2.0) }, body.angle, creature, false);
+        let body = creature.body,
+            point = { x: body.position.x + Math.cos(body.angle) * (creatureRad + bulletRad * 2.0), 
+                      y: body.position.y + Math.sin(body.angle) * (creatureRad + bulletRad * 2.0) };
+        shot(point, body.angle, creature, false);
     } 
 
     function jump(creature, angle) {
+        if (!isNumber(angle)) return;
         if (creature.energy < jumpEnergyCost) return;
         creature.energy -= jumpEnergyCost;
-        Body.applyForce(creature.body, creature.body.position, { x: Math.cos(angle) * jumpForce, y: Math.sin(angle) * jumpForce });
+        let vector = { x: Math.cos(angle + Math.PI) * jumpForce, 
+                       y: Math.sin(angle + Math.PI) * jumpForce };
+        Body.applyForce(creature.body, creature.body.position, vector);
     }
 
     function torque(creature, clockwise) {
         creature.body.torque = torqueForce * (clockwise ? 1.0 : -1.0);
+    }
+
+    function turnToAngle(creature, angle) {
+        if (!isNumber(angle)) return;
+        let diff = differenceBetweenAngles(creature.body.angle, angle),
+            maxf = 2.0;
+        creature.body.torque = (diff / Math.PI * maxf);
     }
 
     function eatBullet(creature) {
@@ -903,14 +942,12 @@ function distanceBetweenPoints(pt1, pt2) {
 }
 
 function angleBetween(obj1, obj2) {
-    let	dx = obj1.position.x - obj2.position.x,
-        dy = obj1.position.y - obj2.position.y;
-    return Math.atan2(dy, dx);
+    return angleBetweenPoints(obj1.position, obj2.position);
 }
 
 function angleBetweenPoints(pt1, pt2) {
-    let	dx = pt1.x - pt2.x,
-        dy = pt1.y - pt2.y;
+    let	dx = pt2.x - pt1.x,
+        dy = pt2.y - pt1.y;
     return Math.atan2(dy, dx);
 }
 

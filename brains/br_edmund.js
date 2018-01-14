@@ -105,7 +105,7 @@
  * 
  */
 
-Brain_3 = {
+br_edmund = {
     
     /* Name of your awesome neuro-blockchain algorithm. 10 chars max. */
     name: "Edmund",
@@ -191,7 +191,7 @@ Brain_3 = {
         // Consider dangerous bullet first
         if (dangerousBullet && dangerousBulletDist < 200 && self.energy >= jumpEnergyCost) {
             let bulletAngle = Math.atan2(dangerousBullet.velocity.y, dangerousBullet.velocity.x);
-            let collisionAngle = angleBetween(self, dangerousBullet);
+            let collisionAngle = angleBetween(dangerousBullet, self);
             const backlash = Math.PI / 25.0;
             let diff = Math.abs(differenceBetweenAngles(bulletAngle, collisionAngle));
             if (diff < backlash) {
@@ -242,7 +242,7 @@ Brain_3 = {
 
             // Check enough energy for hunting
             if (self.energy > shotEnergyCost + 10 /* for pursuit */) {
-                let diff = Math.abs(differenceBetweenAngles(self.angle, directionAngle) - Math.PI);
+                let diff = Math.abs(differenceBetweenAngles(self.angle, directionAngle));
                 if (diff < backlash) {
                     return { do: actions.shoot };
                 }

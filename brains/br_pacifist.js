@@ -1,6 +1,6 @@
 //
 //  Programmer Unknown's BattleGround
-//  Base Ape Algorithm
+//  Base Algorithm
 //
 //  The MIT License (MIT)
 //
@@ -105,19 +105,19 @@
  * 
  */
 
-Brain_0 = {
+br_pacifist = {
     
     /* Name of your awesome neuro-blockchain algorithm. 10 chars max. */
-    name: "Ape",
+    name: "Pacifist",
 
     /** 
      * Kind of a creature. 
      * Possible variations are [rhino, bear, moose, bull].
      */
-    kind: kinds.bull,
+    kind: kinds.moose,
 
     /* 10 chars max, displayed with name of the algorithm on the leaderboard. */
-    author: "Nature",
+    author: "Sonya",
 
     /**
      * Loop function called by runner.
@@ -166,64 +166,37 @@ Brain_0 = {
      * };
      * 
      */
-    thinkAboutIt: function(self, enemies, bullets, objects, events) {
+    thinkAboutIt: function(self, enemies, bullets, objects) {
 
-        let safeBullet, dangerousBullet;
+        // Just eat reachible bullets.
+        // Don't kill anybody.
+
+        // Eat bullet if self has one 
+        if (self.bullets > 0) {
+            return { do: actions.eat };
+        }
+
+        let safeBullet;
         const max = ground.width + ground.height;
-        let safeBulletDist = max,
-            dangerousBulletDist = max;
+        let safeBulletDist = max; 
 
-        // Looking for nearest bullets
+        // Looking for most centered safe bullet
+        let center = { x: ground.width / 2, y: ground.height / 2 };
         bullets.forEach(bullet => {
-            let dist = distanceBetween(self, bullet);
-            if (bullet.dangerous && dist < dangerousBulletDist) {
-                dangerousBulletDist = dist;
-                dangerousBullet = bullet;
-            }
+            let dist = distanceBetweenPoints(center, bullet.position);
             if (!bullet.dangerous && dist < safeBulletDist) {
                 safeBulletDist = dist;
                 safeBullet = bullet;
             }
         });
 
-        // Consider dangerous bullet first
-        if (dangerousBullet) {
-            let bulletAngle = Math.atan2(dangerousBullet.velocity.y, dangerousBullet.velocity.x);
-            let collisionAngle = angleBetween(self, dangerousBullet);
-            const backlash = Math.PI / 25.0;
-            let diff = Math.abs(differenceBetweenAngles(bulletAngle, collisionAngle));
-            if (diff < backlash) {
-                return { do: actions.jump, params: { angle: bulletAngle + Math.PI / 2.0 } };
-            }
-        }
-
-        // Consider save bullet. Just nearest.
-        if (safeBullet && self.bullets < creatureMaxBullets) {
+        // Grab the bullet
+        if (safeBullet) {
             let angle = angleBetween(self, safeBullet);
             return { do: actions.move, params: { angle: angle } };
         }
-
-        // Do nothing if there's no anyone else
-        if (self.bullets < 1 || enemies.length < 1 ) {
-            return { do: actions.none, params: { message: "Yeahh" } };
-        }
-        else {
-            // Check enough energy for hunting
-            if (self.energy > shotEnergyCost + 10 /* for pursuit */) {
-                // First enemy, whithout hesitation
-                let enemy = enemies[0];
-                let directionAngle = angleBetween(self, enemy);
-                const backlash = Math.PI / 50.0;
-                let diff = Math.abs(differenceBetweenAngles(self.angle, directionAngle) - Math.PI);
-                if (diff < backlash) {
-                    return { do: actions.shoot };
-                }
-                else {
-                    return { do: actions.move, params: { angle: directionAngle } };
-                }
-            }   
-        }
- 
+        
+        // Do nothing otherwise
         return { do: actions.none };
     }
     
