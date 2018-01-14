@@ -71,22 +71,8 @@ function battleGround() {
           widthHalf = width / 2,
           heightHalf = height / 2,
           dangerousBulletSpeed  = 5,
-          killsToLevelUp = [2, 4],
-          obstaclesDensity = 130, // 1 obj per 33k pixels
-          maxAliveCreatures = 3, // 4
           maxBulletsOnGround = 20,
-          summonInterval = 20,
-          
-    // Energy costs of actions
-          moveEnergyCost = 1.0,
-
-    // Energy refill speed
-          energyRefillPerTick = 0.8,
-          bulletsGeneratorFrequency = 90,
-
-    // Messaging
-          messageLineLimit = 20,
-          messageShowTime = 3 * 1000;
+          summonInterval = 20;          
 
     // create an engine
     let engine = Engine.create(),
@@ -755,7 +741,15 @@ function battleGround() {
                 let lines = [];
 
                 if (it.message.length <= messageLineLimit) {
-                    lines.push(it.message);
+                    let msg = it.message;
+                    if (msg.includes("\n")) {
+                        let arr = msg.split("\n");
+                        lines.push(arr[0]);
+                        lines.push(arr[1]);
+                    }
+                    else {
+                        lines.push(it.message);
+                    }
                 }
                 else {
                     let words = it.message.split(" "),
@@ -764,13 +758,21 @@ function battleGround() {
                     for (let w = 0; w < words.length; w++) {
                         let cl = line + words[w] + " ";
                         wc++;
-                        if (cl.length >= messageLineLimit) {
-                            lines.push(wc == 1 ? cl.substr(0, messageLineLimit) : line.trim());
-                            line = wc == 1 ? "" : words[w] + " ";
+                        if (cl.includes("\n")) {
+                            let pos = cl.indexOf("\n");
+                            lines.push(cl.substr(0, pos).trim());
+                            line = cl.substr(pos + 1, cl.length - pos - 1);
                             wc = 0;
                         }
                         else {
-                            line = cl;
+                            if (cl.length >= messageLineLimit) {
+                                lines.push(wc == 1 ? cl.substr(0, messageLineLimit) : line.trim());
+                                line = wc == 1 ? "" : words[w] + " ";
+                                wc = 0;
+                            }
+                            else {
+                                line = cl;
+                            }
                         }
                     }
                     if (line.length) lines.push(line.trim());
