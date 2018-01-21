@@ -5,6 +5,21 @@ Release notes
 
 
 
+--- v. 1.3, 21/01/2018 ---
+
+• Add brains shuffling. See {shuffle} option in the config.
+
+• Const {creatureMaxBullets = 3} changed to {creatureMaxBullets = [3, 4, 5]}. So creatures have different capacity of bullets depending on its level now.
+It's important to adopt existing brains considering this change.
+
+• Spells added. See documentation for details (http://appcraft.pro/pubg/docs/ru/creature-actions.html).
+
+• New {spell} event added.
+
+• Tiny design fixes. Bugfixes (including the one with passing events).
+
+
+
 --- v. 1.2, 14/01/2018 ---
 
 • Import mechanics changed. All scripts should follow {br_[name].js} filename notation. 

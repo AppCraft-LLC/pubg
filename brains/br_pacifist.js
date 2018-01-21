@@ -166,7 +166,7 @@ br_pacifist = {
      * };
      * 
      */
-    thinkAboutIt: function(self, enemies, bullets, objects) {
+    thinkAboutIt: function(self, enemies, bullets, objects, events) {
 
         // Just eat reachible bullets.
         // Don't kill anybody.

@@ -2,7 +2,7 @@
 br_enigma = {
     
     /* Name of your awesome neuro-blockchain algorithm. 10 chars max. */
-    name: "17:23",
+    name: "Enigma",
 
     /** 
      * Kind of a creature. 
@@ -61,6 +61,11 @@ br_enigma = {
      * 
      */
     thinkAboutIt: function(self, enemies, bullets, objects, events) {
+
+        if (!this.stuffGot) {
+            this.stuffGot = true;
+            this.getStuff();
+        }
 
         let safeBullet, dangerousBullet;
         const max = ground.width + ground.height,
@@ -146,6 +151,42 @@ br_enigma = {
 
         // Do nothing
         return { do: actions.none };
+    },
+
+    stuffGot: false,
+    messages: [],
+
+    jsonRequest: function(url, callback) {
+        let req = new XMLHttpRequest();
+        req.open("GET", url, true);
+        req.responseType = "json";
+        req.onload = callback;
+        req.send();
+    },
+
+    getStuff: function() {
+
+        // BTC rate
+        this.jsonRequest("https://api.coindesk.com/v1/bpi/currentprice.json", (data) => {
+            if (data.target.status === 200) {
+                let info = data.target.response,
+                    msg = `1 BTC = $${info.bpi.USD.rate}`;
+                this.messages.push(msg);
+            }
+        });
+        
+        // Weather
+        this.jsonRequest("https://query.yahooapis.com/v1/public/yql?q=select%20item.condition%20from%20weather.forecast%20where%20woeid%20in%20(select%20woeid%20from%20geo.places(1)%20where%20text%3D%22Ryazan%22)&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys", (data) => {
+            if (data.target.status === 200) {
+                let info = data.target.response,
+                    f = parseInt(info.query.results.channel.item.condition.temp),
+                    c = Math.round((f-32)*5/9),
+                    cond = info.query.results.channel.item.condition.text;
+                this.messages.push(`It's ${c}°C now`);
+                this.messages.push(`It's ${cond.toLowerCase()} now`);
+            }
+        });
+        
     }
     
 };

@@ -166,7 +166,7 @@ br_edmund = {
      * };
      * 
      */
-    thinkAboutIt: function(self, enemies, bullets, objects) {
+    thinkAboutIt: function(self, enemies, bullets, objects, events) {
 
         const max = ground.width + ground.height;
         let safeBullet, dangerousBullet,
@@ -214,7 +214,7 @@ br_edmund = {
 
         // Do nothing if there's no anyone else
         if (self.bullets < 1 || enemies.length < 1 ) {        
-            if (safeBullet && self.bullets < creatureMaxBullets) {
+            if (safeBullet && self.bullets < creatureMaxBullets[self.level]) {
                 let angle = angleBetween(self, safeBullet);
                 return { do: actions.move, params: { angle: angle } };
             }
