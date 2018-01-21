@@ -575,18 +575,11 @@ function battleGround() {
 
     // an example of using mouse events on a mouse
     Events.on(mouseConstraint, 'mousedown', function(event) {
-        // if (creatures.length == 0) {
-            // nextCreature();
-        // }
-        // else {
-            // mpoint = mouseConstraint.mouse.position;
-        // }
-
-        if (creatures.length > 1) {
+        // if (creatures.length > 1) {
             // superPower(creatures[0], creatures[1]);
             // superPower(creatures[0], obstacles[0], Math.PI);
-            spell(creatures[0], null, null);
-        }
+            // spell(creatures[0], null, null);
+        // }
     });
 
     // to prevent dragging
@@ -806,19 +799,19 @@ function battleGround() {
                         }
                         happened.push(event);
 
-                        let brain = creature.brain,
-                            blts = creature.bullets,
+                        let blts = creature.bullets,
                             pos = body.position;
+                        creature.brain.deaths++;
+                        creature.brain.alive = false;                        
+                        creature.brain = null;
+                        body.label = null;
                         Matter.Composite.remove(world, body);
                         creatures.splice(creatures.indexOf(creature), 1);
                         for (let i = 0; i < blts; i++) {
                             shot(pos, randomAngle(), null, false, shells.steel);
                         }
 
-                        brain.deaths++;
-                        brain.alive = false;
                         calculateIQForVictimAndKiller(brain, shooter ? shooter.brain : null);
-                
                         updateLeaderboard();
                     }
                     else {
