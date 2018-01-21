@@ -6,7 +6,7 @@ const cfg_sources = [
         "br_edmund.js",
         "br_pacifist.js"
       ],
-      shuffleBrains = false;
+      shuffleBrains = true;
 
 
 const creatureMaxLives = [100.0, 150.0, 250.0],

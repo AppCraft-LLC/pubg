@@ -254,13 +254,13 @@ function battleGround() {
         let table = document.getElementById("leaderboard"),
             rows = table.rows.length - 1;
 
-        // sort by kills 
+        // sort by iq
         let items = [];
         brains.forEach(b => {
             items.push({ name: `${b.name} (${b.author})`.toUpperCase(), kills: b.kills, iq: b.iq, alive: b.alive, color: b.color, deaths: b.deaths });
         });
         items.sort(function(a, b) {
-            return a.kills > b.kills ? -1 : a.kills < b.kills ? 1 : 0;
+            return a.iq > b.iq ? -1 : a.iq < b.iq ? 1 : 0;
         });
 
         for (let i = 0; i < items.length; i++) {
@@ -582,10 +582,6 @@ function battleGround() {
         // }
     });
 
-    // to prevent dragging
-    Events.on(mouseConstraint, 'startdrag', function(event) {});
-    Events.on(mouseConstraint, 'enddrag', function(event) {});
-
     // loop logic
     Events.on(engine, 'beforeUpdate', function(event) {
 
@@ -799,10 +795,11 @@ function battleGround() {
                         }
                         happened.push(event);
 
-                        let blts = creature.bullets,
+                        let brain = creature.brain,
+                            blts = creature.bullets,
                             pos = body.position;
-                        creature.brain.deaths++;
-                        creature.brain.alive = false;                        
+                        brain.deaths++;
+                        brain.alive = false;                        
                         creature.brain = null;
                         body.label = null;
                         Matter.Composite.remove(world, body);
