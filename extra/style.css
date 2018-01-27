@@ -1,11 +1,11 @@
-body {
-    margin:0px;
+body, a {
+    margin: 0px;
     color: white;
     font-family: Verdana, Geneva, Tahoma, sans-serif;
-    font-size: 90%;
+    font-size: 75%;
     font-weight: 600;
     -webkit-text-stroke: 0.5px rgb(70, 70, 70);
-    overflow:hidden;
+    overflow: hidden;
 }
 
 #container {
@@ -15,16 +15,16 @@ body {
 }
 
 #float {
-    position:absolute; 
-    top:10pt; 
+    position: absolute; 
+    top: 0pt; 
     right: 10pt;
 }
 
 table {
     background: rgba(201, 201, 201, 0.5);
-    border-radius:7px;
-    -moz-border-radius:7px;
-    -webkit-border-radius:7px;
+    border-radius: 7px;
+    -moz-border-radius: 7px;
+    -webkit-border-radius: 7px;
 }
 
 th {
@@ -45,3 +45,6 @@ td.right {
 td {
     padding: 2pt 5pt 2pt 5pt;
 }
+
+a { font-size: 100%; text-decoration: none; }
+a:hover { text-decoration: none; }

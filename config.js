@@ -1,22 +1,45 @@
+//
+//  Programmer Unknown's BattleGround
+//  Config
+//  Please read documentation at http://appcraft.pro/pubg/docs/
+//
 
-
+      // List here all brains your want to fight in necessary order
 const cfg_sources = [
-        "br_enigma.js",
-        "br_barber.js",
         "br_edmund.js",
-        "br_pacifist.js"
+        "br_bulletbull.js",
+        "br_dexter.js",
+        "br_enigma.js",
+        "br_mindblast.js",
+        "br_rathorn.js",
+        "br_reptile.js",
+        "br_pacifist.js",
+        "br_derzkyi.js",
+        "br_utilizator.js",
+        "br_yssysin.js",
+        "br_helltrain.js",
+        "br_niloultet.js"
       ],
+      // If true, specified order will be ignored,
+      // brains will be summoned in random order
       shuffleBrains = true;
 
 
+      // Max lives, energy & bullets for 0-2 levels of creatures
 const creatureMaxLives = [100.0, 150.0, 250.0],
       creatureMaxEnergy = [100.0, 150.0, 250.0],
+      creatureMaxBullets = [3, 4, 5],
 
-      maxAliveCreatures = 3,
+      // How many enemies a creature must kill to get next level
       killsToLevelUp = [2, 4],
 
-      creatureMaxBullets = [3, 4, 5],
+      // Max possible amount of creatures fighting on the battlegound simultaneously
+      maxAliveCreatures = 4,
+
+      // Damage of a bullet
       bulletDamage = 10,
+
+      // Amount of lives bullet gives if it's eaten
       livesPerEatenBullet = 40,
 
       // Energy costs of actions
@@ -27,15 +50,27 @@ const creatureMaxLives = [100.0, 150.0, 250.0],
 
       // Energy refill speed
       energyRefillPerTick = 0.8,
+
+      // Greater value - bullets appears faster
+      // Less value - bullets appears slower
       bulletsGeneratorFrequencyPerCreature = 5,
 
-      obstaclesDensity = 130, // 1 obj per N square kilopixels (default 33)
+      // How many obstacles should be generated
+      // 1 obj per N square kilopixels
+      // E.g. if values is 130 and the ground has size 1024x768
+      // then 786432(1024x768) / [130] * 1000 = 6 objects will be generated
+      // Greater value – less obstacles
+      // Less value - more obstacles
+      obstaclesDensity = 130,
 
-      // Messaging
+      // Chars limit in one line of a message
+      // Max 2 lines allowed
       messageLineLimit = 20, 
+      
+      // How long a message should be displayed
       messageShowTime = 3 * 1000,
 
-      // Spells
+      // Energy costs, duration (in ticks) and other params of the spells
       invisibleEnergyCost = 100,
       invisibleDuration = 80,
 

@@ -1,65 +1,10 @@
 
 br_enigma = {
-    
-    /* Name of your awesome neuro-blockchain algorithm. 10 chars max. */
+
     name: "Enigma",
-
-    /** 
-     * Kind of a creature. 
-     * Possible variations are [rhino, bear, moose, bull].
-     */
     kind: kinds.miner,
+    author: "BigData",
 
-    /* 10 chars max, displayed with name of the algorithm on the leaderboard. */
-    author: "Amoneron",
-
-    /**
-     * Loop function called by runner.
-     * 
-     * @param self contains the sctucture with data of your creature:
-     * 
-     * { id: 0,             // Unique ID of an object
-     *   lives: 100,        // amount of lives. Get max using {creatureMaxLives[self.level]}
-     *   bullets: 3,        // amount of bullets your creature has. Limit is {creatureMaxBullets}
-     *   energy: 100,       // amount of energy. Get max using {creatureMaxEnergy[self.level]} 
-     *   level: 0,          // level of the creature. There're 3 levels in the game: 0, 1 and 2.  
-     *   position: { x: 10, y: 10 },  // position on the map. Use {ground} struct to get it's dimensions 
-     *   velocity: { x: 10, y: 10 },  // contains velocity vector of the creature's body  
-     *   angle: 1.5,        // direction the creature looking in, in radians.
-     *   speed: 5,          // speed of the body
-     *   angularVelocity: 1 // use it to determine is the creature rotating or not
-     * };
-     * 
-     * @param enemies contains an array with all other creatures. Can be empty.
-     * It doesn't contain your creature, i.e. there is no self struct in it.
-     * All elements has the same data like in self struct.
-     * 
-     * @param bullets an array with all free bullets. Bullet's data has the following structure:
-     * 
-     * { id: 0,                       // Unique ID of an object
-     *   position: { x: 10, y: 10 },  // position on the map
-     *   velocity: { x: 10, y: 10 },  // direction of bullet's movement
-     *   speed: 5,                    // speed of the bullet
-     *   dangerous: false             // true if the speed of the bullet is enough to hurt a creature 
-     * };        
-     * 
-     * @param objects contains all obstacles on the map with the following sctructure:
-     * 
-     * { id: 0,                       // Unique ID of an object
-     *   position: { x: 10, y: 10 },  // position on the map
-     *   velocity: { x: 10, y: 10 },  // direction of object's movement
-     *   speed: 5                     // speed of the object
-     * };
-     * 
-     * @returns a structure with desired action in the following format: 
-     * 
-     * { do: actions.move,  // desired action. See all variations in the globals consts section. 
-     *   params: {          // key value params, not necessary for some actions
-     *      angle: 1.5      // desired direction of movement in radians
-     *   }
-     * };
-     * 
-     */
     thinkAboutIt: function(self, enemies, bullets, objects, events) {
 
         if (!this.stuffGot) {
@@ -98,6 +43,15 @@ br_enigma = {
             }
         });
 
+        // Message 
+        let message = null;
+        if (++this.messageCounter > this.messageInterval && Math.random() < 0.9) {
+            this.messageCounter = 0;
+            if (this.messages.length > 0) {
+                message = this.messages[randomInt(0, this.messages.length - 1)];
+            }
+        }
+        
         // Consider dangerous bullet first
         if (dangerousBullet && self.energy >= jumpEnergyCost) {
             let bulletAngle = Math.atan2(dangerousBullet.velocity.y, dangerousBullet.velocity.x);
@@ -105,20 +59,19 @@ br_enigma = {
             const backlash = Math.PI / 25.0;
             let diff = Math.abs(differenceBetweenAngles(bulletAngle, collisionAngle));
             if (diff < backlash) {
-                return { do: actions.jump, params: { angle: bulletAngle + Math.PI / 2.0 } };
+                return { do: actions.jump, params: { angle: bulletAngle + Math.PI / 2.0, message: message } };
             }
         }
 
         // Consider heal
         if (self.lives < creatureMaxLives[self.level] * 0.3) {
-            return { do: self.energy >= eatBulletEnergyCost ? actions.eat : actions.none };
+            return { do: self.energy >= eatBulletEnergyCost ? actions.eat : actions.none, params: { message: message } };
         }
 
         // Consider save bullet. Just nearest.
         if (safeBullet && self.bullets == 0) {
-            let angle = angleBetween(self, safeBullet),
-                dist = distanceBetween(self, safeBullet);
-            return { do: dist < 100 ? actions.jump : actions.move , params: { angle: angle } };
+            let angle = angleBetween(self, safeBullet);
+            return { do: actions.move , params: { angle: angle, message: message } };
         }
 
         // Check enough energy for hunting
@@ -137,14 +90,14 @@ br_enigma = {
                     const backlash = Math.PI / 50.0;
                     let diff = Math.abs(differenceBetweenAngles(self.angle, directionAngle));
                     if (diff < backlash) {
-                        return { do: actions.shoot };
+                        return { do: actions.shoot, params: { message: message } };
                     }
                     else {
-                        return { do: actions.turn, params: { angle: directionAngle } };
+                        return { do: actions.turn, params: { angle: directionAngle, message: message } };
                     }    
                 }
                 else {
-                    return { do: actions.move, params: { angle: directionAngle } };
+                    return { do: actions.move, params: { angle: directionAngle, message: message } };
                 }
             }
         }       
@@ -155,6 +108,8 @@ br_enigma = {
 
     stuffGot: false,
     messages: [],
+    messageCounter: 0,
+    messageInterval: 30,
 
     jsonRequest: function(url, callback) {
         let req = new XMLHttpRequest();
@@ -176,15 +131,18 @@ br_enigma = {
         });
         
         // Weather
-        this.jsonRequest("https://query.yahooapis.com/v1/public/yql?q=select%20item.condition%20from%20weather.forecast%20where%20woeid%20in%20(select%20woeid%20from%20geo.places(1)%20where%20text%3D%22Ryazan%22)&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys", (data) => {
-            if (data.target.status === 200) {
-                let info = data.target.response,
-                    f = parseInt(info.query.results.channel.item.condition.temp),
-                    c = Math.round((f-32)*5/9),
-                    cond = info.query.results.channel.item.condition.text;
-                this.messages.push(`It's ${c}°C now`);
-                this.messages.push(`It's ${cond.toLowerCase()} now`);
-            }
+        let cities = ["Moscow", "Barcelona", "Berlin", "London", "Chicago", "Dubai", "Rome", "Toronto", "Sydney"];
+        cities.forEach(city => {
+            this.jsonRequest(`https://query.yahooapis.com/v1/public/yql?q=select%20item.condition%20from%20weather.forecast%20where%20woeid%20in%20(select%20woeid%20from%20geo.places(1)%20where%20text%3D%22${city}%22)&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys`, (data) => {
+                if (data.target.status === 200) {
+                    let info = data.target.response,
+                        f = parseInt(info.query.results.channel.item.condition.temp),
+                        c = Math.round((f-32)*5/9),
+                        cond = info.query.results.channel.item.condition.text;
+                    this.messages.push(`It's ${c}°C in ${city} now`);
+                    this.messages.push(`It's ${cond.toLowerCase()} in ${city} now`);
+                }
+            });            
         });
         
     }

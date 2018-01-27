@@ -24,11 +24,13 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 //
+//  Please read documentation at http://appcraft.pro/pubg/docs/
 
+// Global enums
 let actions = { none: 0, move: 1, rotate: 2, turn: 3, shoot: 4, jump: 5, eat: 6, spell: 7 },
     kinds = { rhino: 0, bear: 1, moose: 2, bull: 3, runchip: 4, miner: 5, sprayer: 6, splitpus: 7 },
     ground = { width: 0, height: 0 },
-    events = { wound: 0, murder: 1, death: 2, upgrade: 3, birth: 4, spell: 5 },
+    eventTypes = { wound: 0, murder: 1, death: 2, upgrade: 3, birth: 4, spell: 5 },
     engineRefExt;
 
 function pubg() {
@@ -58,7 +60,7 @@ function battleGround() {
         MouseConstraint = Matter.MouseConstraint,
         Bodies = Matter.Bodies;
 
-    // Base arrays, loop management
+    // Base arrays, loop management, colors
     let creatures = [],
         obstacles = [],
         bullets = [],
@@ -69,6 +71,7 @@ function battleGround() {
         scrVer = 0,
         happened = [],
         summonCounter = 0,
+        noBulletsCounter = 0,
         bulletsGeneratorFrequency = 0,
         shells = { steel: 0, poisoned: 1, rubber: 2, ice: 3 },
         bulletColors = [
@@ -78,6 +81,7 @@ function battleGround() {
             { fill: "#00AEFF", stroke: "#0093A0" }
         ];
 
+    // Main consts
     const loopStep = 0.1,
           moveForce = 0.04,
           bulletForce = 15.5,
@@ -94,14 +98,15 @@ function battleGround() {
           heightHalf = height / 2,
           dangerousBulletSpeed  = 5,
           maxBulletsOnGround = 20,
-          summonInterval = 20; //10;
+          summonInterval = 10,
+          noBulletsInterval = 50;
 
-    // create an engine
+    // Create an engine
     let engine = Engine.create(),
         world = engine.world;
     engineRefExt = engine;
 
-    // create a renderer
+    // Create a renderer
     let render = Render.create({
         element: container,
         engine: engine,
@@ -109,8 +114,6 @@ function battleGround() {
             width: width,
             height: height,
             wireframes: false
-            // showAngleIndicator: true,
-            // background: ''
         }
     });
 
@@ -133,7 +136,7 @@ function battleGround() {
         energy: creatureMaxEnergy[0],
         brain: null,
         body: null,
-        bullets: 1, //3,
+        bullets: 1,
         level: 0,
         kills: 0,
         cryToTheLeft: false,
@@ -147,7 +150,7 @@ function battleGround() {
         guttapercha: false,
         freezeCounter: 0,
         subzero: false,
-        counter: 0
+        counter: 0  // spell counter
     };
 
     let Bullet = {
@@ -187,7 +190,7 @@ function battleGround() {
         return (c);
     }
 
-    // Load config
+    // Try to load config
     if (typeof cfg_sources === 'undefined') {
         console.error("config.js not found.");
         return;
@@ -254,7 +257,7 @@ function battleGround() {
         let table = document.getElementById("leaderboard"),
             rows = table.rows.length - 1;
 
-        // sort by iq
+        // Sort by IQ
         let items = [];
         brains.forEach(b => {
             items.push({ name: `${b.name} (${b.author})`.toUpperCase(), kills: b.kills, iq: b.iq, alive: b.alive, color: b.color, deaths: b.deaths });
@@ -325,7 +328,7 @@ function battleGround() {
 
         // Emit birth event
         let event = Object.create(Event);
-        event.type = events.birth;
+        event.type = eventTypes.birth;
         event.payload = [obfuscateCreature(creature)];
         happened.push(event);
     }
@@ -399,7 +402,6 @@ function battleGround() {
         body.restitution = rs;
         body.frictionAir = fa;
         body.label = obstacle;
-        // body.density = d;
         Body.setDensity(body, d);
         body.render.sprite.texture = `./img/obstacles/${kind}.png`;
 
@@ -418,7 +420,7 @@ function battleGround() {
             updateCreatureEmbodiment(creature);
             // Emit upgrade event
             let event = Object.create(Event);
-            event.type = events.upgrade;
+            event.type = eventTypes.upgrade;
             event.payload = [obfuscateCreature(creature)];
             happened.push(event);            
         }
@@ -528,15 +530,16 @@ function battleGround() {
         return a;
     }
 
-    // 
+    // Freeze enums so brains can't change it
     Object.freeze(actions);
     Object.freeze(kinds);
     ground = { width: width, height: height };
     Object.freeze(ground);
-    Object.freeze(events);
+    Object.freeze(eventTypes);
     Object.freeze(shells);
     Object.freeze(bulletColors);
     
+    // Create ground edges
     const blockMrg = 200,
           blockW = 100,
           blockOff = blockW / 2;
@@ -548,17 +551,21 @@ function battleGround() {
     let edgeBottom = Bodies.rectangle(widthHalf, height + blockOff, width + blockMrg, blockW, opt);
     let edgeLeft = Bodies.rectangle(-blockOff, heightHalf, blockW, height + blockMrg, opt);
 
-    // add all of the bodies to the world
     World.add(world, [edgeTop, edgeRight, edgeBottom, edgeLeft]);
     world.gravity.x = world.gravity.y = 0;
 
-    // Generate obstacles
+    // Generate some obstacles
     let amount = Math.ceil(width * height / 1000 / obstaclesDensity);
     for (let i = 0; i < amount; i++) {
         newObstacle(Math.round(Math.random() * 15.0));
     }
+    
+    // Drop some bullets
+    for (let i = 0; i < 5; i++) {
+        dropBullet();
+    }
 
-    // add mouse control
+    // Add mouse constraint to enable dragging of all objects
     let mouse = Mouse.create(render.canvas),
         mouseConstraint = MouseConstraint.create(engine, {
             mouse: mouse,
@@ -569,36 +576,34 @@ function battleGround() {
                 }
             }
         });
-    // mouseConstraint.collisionFilter.mask = 0;
+    // The line above turning dragging off if needed
+    // mouseConstraint.collisionFilter.mask = 0; 
     World.add(world, mouseConstraint);
     render.mouse = mouse;
 
-    // an example of using mouse events on a mouse
+    // Used for debug, do nothing
     Events.on(mouseConstraint, 'mousedown', function(event) {
-        // if (creatures.length > 1) {
-            // superPower(creatures[0], creatures[1]);
-            // superPower(creatures[0], obstacles[0], Math.PI);
-            // spell(creatures[0], null, null);
-        // }
     });
 
-    // loop logic
+    // Main loop logic
     Events.on(engine, 'beforeUpdate', function(event) {
 
         if (creatures.length < 0) return;
         
-        loopCounter += loopStep;// 0.1; // every 10th iteration
+        loopCounter += loopStep;
         if (loopCounter < 0) return;
         loopCounter = -1;
 
         bulletsGeneratorCounter++;
+        if (bullets.length > 0) noBulletsCounter = 0;
+        if (++noBulletsCounter >= noBulletsInterval) {
+            noBulletsCounter = 0;
+            bulletsGeneratorCounter = bulletsGeneratorFrequency + 1;
+        }
         
         if (bulletsGeneratorCounter > bulletsGeneratorFrequency && bullets.length < maxBulletsOnGround) {
             bulletsGeneratorCounter = 0;
-            const margin = creatureRad * 2;
-            let x = randomInt(margin, width - margin),
-                y = randomInt(margin, height - margin);
-            shot({x: x, y: y}, 0, null, true, shells.steel);
+            dropBullet();
         } 
 
         let enemies = [],
@@ -608,7 +613,7 @@ function battleGround() {
             it.energy += energyRefillPerTick;
             if (it.energy > creatureMaxEnergy[it.level]) it.energy = creatureMaxEnergy[it.level];
 
-            // Consider internal counters
+            // Consider spell counters
             if (it.counter > 0) { 
                 if (--it.counter <= 0) {
                     it.counter == 0;
@@ -738,10 +743,12 @@ function battleGround() {
                     break;      
                 default: break;
             }
-            if (action.params && action.params.message) {
-                let msg = action.params.message;
-                it.shouted = Date.now();
-                it.message = msg.length > messageLineLimit * 2 ? msg.substr(0, messageLineLimit * 2) : msg;
+            if (action.params && action.params.message && typeof action.params.message === 'string') {
+                let msg = action.params.message.trim();
+                if (msg.length > 0) {
+                    it.shouted = Date.now();
+                    it.message = msg.length > messageLineLimit * 2 ? msg.substr(0, messageLineLimit * 2) : msg;
+                }
             }
         });
 
@@ -753,7 +760,7 @@ function battleGround() {
         
     });
 
-    // an example of using collisionStart event on an engine
+    // Collision detection
     Events.on(engine, 'collisionStart', function(event) {
         let pairs = event.pairs;
         for (let i = 0; i < pairs.length; i++) {
@@ -788,10 +795,10 @@ function battleGround() {
                             shooter.kills++;
                             shooter.brain.kills++;
                             updateCreatureLevel(shooter);
-                            event.type = events.murder;
+                            event.type = eventTypes.murder;
                             event.payload.push(obfuscateCreature(shooter));
                         } else {
-                            event.type = events.death;
+                            event.type = eventTypes.death;
                         }
                         happened.push(event);
 
@@ -815,7 +822,7 @@ function battleGround() {
 
                         // Emit wound event
                         let event = Object.create(Event);
-                        event.type = events.wound;
+                        event.type = eventTypes.wound;
                         event.payload = [obfuscateCreature(creature)];
                         if (shooter) event.payload.push(obfuscateCreature(shooter));
                         happened.push(event);
@@ -837,6 +844,7 @@ function battleGround() {
         }
     });
 
+    // Draw indicators and messages
     Events.on(render, "afterRender", function(event) {
 
         let ctx = render.context;
@@ -866,6 +874,8 @@ function battleGround() {
                 ctx.fillRect(x - sh, y, s, s);
                 ctx.strokeRect(x - sh, y, s, s);
             }
+
+            // Colors
             let livesFill = "#800000",
                 livesBar = "#D25253",
                 energyFill = "#008002",
@@ -980,7 +990,7 @@ function battleGround() {
                     y += fs + df;
                 }
 
-                //
+                // Stop showing the message
                 if (Date.now() - it.shouted > messageShowTime) it.message = null;
             }
         });
@@ -1018,9 +1028,11 @@ function battleGround() {
         if (stroke) ctx.stroke();
     }
 
-    function letTheBattleBegin() {
-        Engine.run(engine);
-        Render.run(render);
+    function dropBullet() {
+        const margin = creatureRad * 2;
+        let x = randomInt(margin, width - margin),
+            y = randomInt(margin, height - margin);
+        shot({x: x, y: y}, 0, null, true, shells.steel);
     }
 
     // Action functions
@@ -1107,7 +1119,7 @@ function battleGround() {
 
         // Spell event
         let event = Object.create(Event);
-        event.type = events.spell;
+        event.type = eventTypes.spell;
         event.payload = [obfuscateCreature(creature)];
         happened.push(event);
         
@@ -1194,6 +1206,12 @@ function battleGround() {
                 }
                 break;
         }
+    }
+
+    // Run main loop
+    function letTheBattleBegin() {
+        Engine.run(engine);
+        Render.run(render);
     }
 }
 

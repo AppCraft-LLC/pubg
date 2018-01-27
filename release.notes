@@ -5,6 +5,20 @@ Release notes
 
 
 
+--- v. 1.4, 27/01/2018 ---
+
+• Frequency of the bullet generator changed. Bullets appear faster now.
+
+• 5 bullets adding at the start of the game.
+
+• Links to documentation and leaderboard added.
+
+• Added more brains as samples.
+
+• Tiny design fixes. Very tiny.
+
+
+
 --- v. 1.3, 21/01/2018 ---
 
 • Add brains shuffling. See {shuffle} option in the config.
