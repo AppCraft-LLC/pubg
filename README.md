@@ -4,7 +4,7 @@ PUBG (original [PUBG](https://www.playbattlegrounds.com), sorry for using your a
 
 Each algorithm controls a creature (which can be bull, rhino, slug etc.) with an aim to grab bullets and hurt other creatures with it. By killing enemies your creature increases it's IQ, the smartest creatures lists in the leaderboard. Take a look at running PUBG [here](http://appcraft.pro/pubg/).
 
-[![pubg](http://appcraft.pro/pubg/assets/animated_sample.gif)](http://appcraft.pro/pubg/)
+[![pubg](http://appcraft.pro/pubg/assets/pubg_scr_2.png)](http://appcraft.pro/pubg/)
 
 ## How it can be used
 
