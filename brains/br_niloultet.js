@@ -7,6 +7,8 @@ br_niloultet = {
 
     author: 'Andrey',
 
+    description: "Tactical bot. He controls selected sector.",
+
     bot: {},
 
     onPosition: true,

@@ -6,6 +6,8 @@ br_rathorn = {
 
     author: "BlackPeter",
 
+    description: "The sleazy one. Waits for his opponents to run out of health just to deliver the final blow. Master of hit&run and runaway arts.",
+
     thinkAboutIt: function(self, enemies, bullets, objects, events) {
 
         const corners = [{x: 70, y: ground.height - 70}, {x: 70, y: 70}, {x: ground.width - 70, y: 70}, {x: ground.width - 70, y: ground.height - 70}];
@@ -40,7 +42,6 @@ br_rathorn = {
 
         events.forEach(event => {
             if (event.type == 1) {
-                console.log(event);
                 if (event.payload[0].id == self.id) {
                     ratMessage = "Easy kill, " + event.payload[1].name;
                 }
@@ -304,10 +305,9 @@ br_rathorn = {
                 }
             }
         })
-        //Kill the bitch
+        
         if (e != 0) {
             enemy = e;
-            console.log(enemy.lives);
             let backlash = Math.PI / 50.0;
             let directionAngle = angleBetween(self, e);
             if (distanceBetween(self, enemy) < 150) {

@@ -4,6 +4,7 @@ br_pacifist = {
     name: "Pacifist",
     kind: kinds.moose,
     author: "Sonya",
+    description: "Make love, not war ☮︎ Bot with a hard destiny: he does not accept any type of violence, so the main purpose of his life is to consume the bullets before others will get them",
 
     thinkAboutIt: function(self, enemies, bullets, objects, events) {
 

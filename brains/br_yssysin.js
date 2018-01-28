@@ -7,6 +7,8 @@ br_yssysin = {
 
     author: 'X-Ray',
 
+    description: "Indiscriminate bot. He selects a random target and pursues it till death.",
+
     bot: {},
 
     message: null,

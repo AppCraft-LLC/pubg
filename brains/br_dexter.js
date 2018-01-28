@@ -2,6 +2,7 @@ br_dexter = {
     name: "MoreGun",
     kind: kinds.splitpus,
     author: "Sad108",
+    description: "The revengeful one. His parents were brutally murdered. Killer was never found. Now Dexter Moregun is looking for the most infamous murderers to brutally murder them.",
 
     fatherPlumber: null,
     dexterMessage: null,

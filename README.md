@@ -2,7 +2,17 @@
 
 PUBG (original [PUBG](https://www.playbattlegrounds.com), sorry for using your abbreviation, we just want to train our programming skills in this little game for coders and haven't plans to publish it on Steam in the future) is an automatic environment (actually battleground) where several alrogithms fight in the real time.
 
-Each algorithm controls a creature (which can be bull, rhino, slugs etc.) with an aim to grab bullets and hurt other creatures with it. By killing enemies your creature increases it's IQ, the smartest creatures lists in the leaderboard.
+Each algorithm controls a creature (which can be bull, rhino, slug etc.) with an aim to grab bullets and hurt other creatures with it. By killing enemies your creature increases it's IQ, the smartest creatures lists in the leaderboard. Take a look at running PUBG [here](http://appcraft.pro/pubg/).
+
+[![pubg](http://appcraft.pro/pubg/assets/animated_sample.gif)](http://appcraft.pro/pubg/)
+
+## How it can be used
+
+1. If you're learning programming you can use PUBG to train your projection (from abstract thoughts to certain commands) skill.
+
+2. If you works in a team you can organize weekly battles and give pizza, beer or iPhone X to a winner.
+
+3. If you're a teacher you can use PUBG as a small lab to demonstrate basic algorithms and applied samples of programming knowledge. It's much more interesting to make a brain for a creature rather than to draw a parabola on a screen (in most cases).
 
 ## Fast start
 

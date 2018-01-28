@@ -4,6 +4,7 @@ br_helltrain = {
     name: 'Helltrain',
     kind: kinds.miner,
     author: 'Devil',
+    description: "Demon from Hell.",
 
     bot: {},
     message: null,

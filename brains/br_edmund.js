@@ -133,6 +133,15 @@ br_edmund = {
     /* 10 chars max, displayed with name of the algorithm on the leaderboard. */
     author: "Amoneron",
 
+    /** 
+     * Describe what logic you implemented in this brain
+     * so other users can understand your genius thoughts.
+     * It's not used in the game directly, rather
+     * leaderboards (http://appcraft.pro/pubg/docs/en/leaderboard.html) 
+     * takes brain's description from this variable.
+     * */
+    description: "The basic algorithm for writing your bots",
+
     /**
      * Loop function called by runner.
      * 

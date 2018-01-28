@@ -74,6 +74,8 @@ function battleGround() {
         noBulletsCounter = 0,
         bulletsGeneratorFrequency = 0,
         shells = { steel: 0, poisoned: 1, rubber: 2, ice: 3 },
+        fullLeaderboard = false,
+        leaderboardCounter = 0,
         bulletColors = [
             { fill: "#FFF000", stroke: "#BEB320" },
             { fill: "#42FF00", stroke: "#299E00" },
@@ -99,7 +101,8 @@ function battleGround() {
           dangerousBulletSpeed  = 5,
           maxBulletsOnGround = 20,
           summonInterval = 10,
-          noBulletsInterval = 50;
+          fullLeaderboardInterval = 50,
+          noBulletsInterval = 40;
 
     // Create an engine
     let engine = Engine.create(),
@@ -169,25 +172,11 @@ function battleGround() {
         payload: null 
     };
 
-    function rainbow(numOfSteps, step) {
-        let r, g, b,
-            h = step / numOfSteps,
-            i = ~~(h * 6),
-            f = h * 6 - i,
-            q = 1 - f;
-        switch(i % 6) {
-            case 0: r = 1; g = f; b = 0; break;
-            case 1: r = q; g = 1; b = 0; break;
-            case 2: r = 0; g = 1; b = f; break;
-            case 3: r = 0; g = q; b = 1; break;
-            case 4: r = f; g = 0; b = 1; break;
-            case 5: r = 1; g = 0; b = q; break;
-        }
-        let c = "#" + ("00" + (~ ~(r * 255)).toString(16)).slice(-2) + ("00" + (~ ~(g * 255)).toString(16)).slice(-2) + ("00" + (~ ~(b * 255)).toString(16)).slice(-2);
-        let sh = Math.floor(step / 6) * -25;
-        if (sh < -120) sh = -120;
-        if (sh < 0) c = Common.shadeColor(c, sh)
-        return (c);
+    function rainbow() {
+        let h = randomInt(0, 359),
+            s = randomInt(50, 99),
+            l = randomInt(45, 65);
+        return `hsl(${h},${s}%,${l}%)`;
     }
 
     // Try to load config
@@ -205,7 +194,7 @@ function battleGround() {
     }
 
     let loadedBrainsCount = 0;
-    bulletsGeneratorFrequency = 105 - maxAliveCreatures * bulletsGeneratorFrequencyPerCreature
+    bulletsGeneratorFrequency = 95 - maxAliveCreatures * bulletsGeneratorFrequencyPerCreature
     if (bulletsGeneratorFrequency < 20) bulletsGeneratorFrequency = 20;
 
     function sourceLoaded() {
@@ -228,7 +217,7 @@ function battleGround() {
             brain.name = code.name.length > 10 ? code.name.substr(0, 10) : code.name;
             brain.kind = code.kind;
             brain.code = code;
-            brain.color = rainbow(sources.length, i);
+            brain.color = rainbow();
             
             let iq = localStorage.getItem(brain.id);
             if (iq) brain.iq = parseInt(iq);
@@ -255,22 +244,31 @@ function battleGround() {
 
     function updateLeaderboard() {
         let table = document.getElementById("leaderboard"),
-            rows = table.rows.length - 1;
+            rowsCount = table.rows.length - 1,
+            aliveCount = 0;
 
         // Sort by IQ
         let items = [];
         brains.forEach(b => {
             items.push({ name: `${b.name} (${b.author})`.toUpperCase(), kills: b.kills, iq: b.iq, alive: b.alive, color: b.color, deaths: b.deaths });
+            if (b.alive) aliveCount++;
         });
         items.sort(function(a, b) {
             return a.iq > b.iq ? -1 : a.iq < b.iq ? 1 : 0;
         });
 
+        // Remove unnecessary rows if needed
+        if (!fullLeaderboard && rowsCount > aliveCount) {
+            for (let i = 0; i < rowsCount - aliveCount; i++) table.deleteRow(table.rows.length - 1);
+            rowsCount = table.rows.length - 1;
+        }
+
+        let r = 1;
         for (let i = 0; i < items.length; i++) {
             let item = items[i],
-                row,
-                r = i + 1;
-            if (rows < r) {
+                row;
+            if (!item.alive && !fullLeaderboard) continue;
+            if (rowsCount < r) {
                 row = table.insertRow(r);
                 for (let j = 0; j < 5; j++) { 
                     let cell = row.insertCell(j);
@@ -279,7 +277,7 @@ function battleGround() {
             } else {
                 row = table.rows[r];
             }
-            row.cells[0].innerHTML = `${r}`;
+            row.cells[0].innerHTML = `${i + 1}`;
             row.cells[1].innerHTML = item.name;
             row.cells[2].innerHTML = `${item.kills}`;
             row.cells[3].innerHTML = `${item.deaths}`;
@@ -294,6 +292,7 @@ function battleGround() {
                 row.style.webkitTextStroke = null;
                 row.classList.add("dead");
             }
+            r++;
         }
     }
 
@@ -594,6 +593,12 @@ function battleGround() {
         if (loopCounter < 0) return;
         loopCounter = -1;
 
+        if (leaderboardCounter > 0 && --leaderboardCounter < 1) {
+            leaderboardCounter = 0;
+            fullLeaderboard = false;
+            updateLeaderboard();
+        } 
+
         bulletsGeneratorCounter++;
         if (bullets.length > 0) noBulletsCounter = 0;
         if (++noBulletsCounter >= noBulletsInterval) {
@@ -806,7 +811,7 @@ function battleGround() {
                             blts = creature.bullets,
                             pos = body.position;
                         brain.deaths++;
-                        brain.alive = false;                        
+                        brain.alive = false;
                         creature.brain = null;
                         body.label = null;
                         Matter.Composite.remove(world, body);
@@ -816,6 +821,8 @@ function battleGround() {
                         }
 
                         calculateIQForVictimAndKiller(brain, shooter ? shooter.brain : null);
+                        leaderboardCounter = fullLeaderboardInterval;
+                        fullLeaderboard = true;
                         updateLeaderboard();
                     }
                     else {

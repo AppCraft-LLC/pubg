@@ -4,6 +4,7 @@ br_enigma = {
     name: "Enigma",
     kind: kinds.miner,
     author: "BigData",
+    description: "Infobot. He keeps his opponents informed about the weather in different cities all over the world and broadcasts actual bitcoins course",
 
     thinkAboutIt: function(self, enemies, bullets, objects, events) {
 
@@ -47,8 +48,9 @@ br_enigma = {
         let message = null;
         if (++this.messageCounter > this.messageInterval && Math.random() < 0.9) {
             this.messageCounter = 0;
-            if (this.messages.length > 0) {
-                message = this.messages[randomInt(0, this.messages.length - 1)];
+            if (this.messages.length > 1) {
+                if (Math.random() < 0.2) message = this.messages[0]; // BTC > USD rate
+                else message = this.messages[randomInt(1, this.messages.length - 1)];
             }
         }
         
@@ -125,8 +127,10 @@ br_enigma = {
         this.jsonRequest("https://api.coindesk.com/v1/bpi/currentprice.json", (data) => {
             if (data.target.status === 200) {
                 let info = data.target.response,
-                    msg = `1 BTC = $${info.bpi.USD.rate}`;
-                this.messages.push(msg);
+                    btc = info.bpi.USD.rate,
+                    pos = btc.indexOf(".");
+                if (pos >= 0) btc = btc.substr(0, pos)
+                this.messages.unshift(`1 BTC = $${btc}`);
             }
         });
         

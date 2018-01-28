@@ -6,6 +6,8 @@ br_bulletbull = {
 
     author: "Urist",
 
+    description: "The spinning one. BULLetBULL gathers enough bullets, then goes to the arena center and starts spinning like a balerina of death until some poor soul appears in his line of sight.",
+
     thinkAboutIt: function(self, enemies, bullets, objects, events) {
 
         if (typeof readyToFire == "undefined") {

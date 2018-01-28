@@ -4,6 +4,7 @@ br_mindblast = {
     name: 'Mindblast',
     kind: kinds.splitpus,
     author: 'Analytic',
+    description: "Shrewd bot. Finds the creature that has the biggest IQ scores and kills it immediatelly.",
 
     bot: {},
     message: null,

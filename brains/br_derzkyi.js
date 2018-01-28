@@ -7,6 +7,8 @@ br_derzkyi = {
 
     author: 'НЕИЗВЕСТЕН',
 
+    description: "Cool russian guy from neighborhood 😎👊🤘",
+
     bot: {},
 
     message: null,

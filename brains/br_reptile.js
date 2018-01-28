@@ -7,6 +7,8 @@ br_reptile = {
 
     author: 'vaskebjørn',
 
+    description: "This bot is very tricky, do not joke with him. Hiding, dodging and smashing others.",
+
     bot: {},
 
     findBulletTimestamp: null,

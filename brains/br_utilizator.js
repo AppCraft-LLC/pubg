@@ -7,6 +7,8 @@ br_utilizator = {
 
     author: 'macMini',
 
+    description: "Smart bot hunting only for the target with the biggest amount of bullets.",
+
     bot: {},
 
     message: null,
