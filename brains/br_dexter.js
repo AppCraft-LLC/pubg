@@ -231,7 +231,7 @@ br_dexter = {
         }
 
         if (self.bullets * bulletDamage >= this.fatherPlumber.lives) {
-            return this.shootAtEnemy(self, fatherPlumber);
+            return this.shootAtEnemy(self, this.fatherPlumber);
         }
 
         if (self.bullets == creatureMaxBullets[self.level] || this.rageMode) {
