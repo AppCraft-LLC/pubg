@@ -812,7 +812,6 @@ function battleGround() {
                             pos = body.position;
                         brain.deaths++;
                         brain.alive = false;
-                        creature.brain = null;
                         body.label = null;
                         Matter.Composite.remove(world, body);
                         creatures.splice(creatures.indexOf(creature), 1);
