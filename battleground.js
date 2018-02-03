@@ -779,7 +779,7 @@ function battleGround() {
                 blt = pair.bodyA;
                 body = pair.bodyB;
             }
-            if (blt && body) {
+            if (blt && body && body.label && blt.label) {
 
                 let creature = body.label;
                 let bullet = blt.label;
@@ -812,7 +812,6 @@ function battleGround() {
                             pos = body.position;
                         brain.deaths++;
                         brain.alive = false;
-                        creature.brain = null;
                         body.label = null;
                         Matter.Composite.remove(world, body);
                         creatures.splice(creatures.indexOf(creature), 1);
@@ -842,10 +841,13 @@ function battleGround() {
                 }
                 else {
                     if (creature.bullets < creatureMaxBullets[creature.level]) {
+                        
+                        // Pick this bullet
                         bullets.splice(bullets.indexOf(bullet), 1);
+                        blt.label = null;
                         Matter.Composite.remove(world, blt);
                         creature.bullets++;
-                    }   
+                    }
                 }
             }
         }
