@@ -18,7 +18,8 @@ const cfg_sources = [
         "br_utilizator.js",
         "br_yssysin.js",
         "br_helltrain.js",
-        "br_niloultet.js"
+        "br_niloultet.js",
+        "br_prosucc.js"
       ],
       // If true, specified order will be ignored,
       // brains will be summoned in random order
@@ -61,7 +62,15 @@ const creatureMaxLives = [100.0, 150.0, 250.0],
       // then 786432(1024x768) / [130] * 1000 = 6 objects will be generated
       // Greater value – less obstacles
       // Less value - more obstacles
-      obstaclesDensity = 130,
+      obstaclesDensity = 100,
+
+      // Dynamites will appear with this probability
+      // Set it to 0 to play without dynamites
+      dynamitesProbability = 0.15,
+
+      // Stars will appear from broken obstacles with this probability
+      // Set it to 0 to play whithout stars
+      starsProbability = 0.8,
 
       // Chars limit in one line of a message
       // Max 2 lines allowed

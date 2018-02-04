@@ -163,7 +163,8 @@ br_edmund = {
      *   speed: 5,          // speed of the body
      *   angularVelocity: 1,// use it to determine is the creature rotating or not
      *   poisoned: false,   // is the creature poisoned or not
-     *   spelling: false    // is the creature spelling or not
+     *   spelling: false,   // is the creature spelling or not
+     *   message: "Hi!"     // phrase the creature is speaking
      * };
      * 
      * @param enemies contains an array with all other creatures. Can be empty.
@@ -185,10 +186,16 @@ br_edmund = {
      *   position: { x: 10, y: 10 },  // position on the map
      *   velocity: { x: 10, y: 10 },  // direction of object's movement
      *   speed: 5,                    // speed of the object
-     *   bounds: { min: { x: 5, y: 5 }, max: { x: 15, y: 15 } } 
+     *   bounds: { min: { x: 5, y: 5 }, max: { x: 15, y: 15 } },
      *                                // AABB region of the object
      *                                // min contains left top corner
      *                                // max contains bottom right corner of the rect
+     *   condition: 10,               // condition of the object,
+     *                                // measured in the same units as lives of creatures
+     *   type: objectTypes.obstacle,  // type of the object, can be:
+     *                                // objectTypes = { obstacle: 0, dynamite: 1, star: 2 }
+     *   shape: starShapes.levelup    // shape of the object, for stars can be:
+     *                                // starShapes = { levelup: 0, healing: 1, poisoned: 2, frozen: 3, death: 4 }
      * };
      * 
      * @param events contains happened events in last loop tick. Can be empty.
@@ -198,9 +205,10 @@ br_edmund = {
      *                            // eventTypes = { wound: 0, murder: 1, death: 2, upgrade: 3, birth: 4, spell: 5 }
      *   payload: [ creature ]    // An array with 1 or 2 creature objects.
      *                            // If contains 2 creatures, the 1st one is the object and the 2nd one is the subject.
-     *                            // Payload of [wound, murder] events contains 2 creatures: 
+     *                            // Payload of [murder] event contains 2 creatures: 
      *                            // the 1st creature is the victim and the 2nd creature is the attacker.
      *                            // Payload of [death, upgrade, birth, spell] events contains 1 creature object.
+     *                            // Payload of [wound] may contain or may not contain the attacker.
      * };
      * 
      * @returns a structure with desired action in the following format: 

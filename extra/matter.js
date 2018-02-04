@@ -7914,6 +7914,43 @@ var Vector = require('../geometry/Vector');
                 }
 
                 if (part.render.sprite && part.render.sprite.texture && !options.wireframes) {
+
+                    // aura
+                    if (part.render.aura && part.render.aura.texture) {
+
+                        const anim = 30,
+                              maxs = 0.95;
+
+                        var sprite = part.render.sprite,
+                            aura = part.render.aura,
+                            texture = _getTexture(render, aura.texture),
+                            s = maxs,
+                            t = aura.counter,
+                            d = aura.duration;  
+
+                        if (t > d - anim) s = (d - t) / anim * maxs;
+                        else if (t < anim) s = t / anim * maxs;
+                        
+                        c.translate(part.position.x, part.position.y); 
+                        c.rotate(aura.angle);
+
+                        c.drawImage(
+                            texture,
+                            texture.width * -sprite.xOffset * s, 
+                            texture.height * -sprite.yOffset * s, 
+                            texture.width * s, 
+                            texture.height * s
+                        );
+
+                        // revert translation, hopefully faster than save / restore
+                        c.rotate(-aura.angle);
+                        c.translate(-part.position.x, -part.position.y); 
+
+                        // 
+                        aura.angle += aura.spin;
+                        if (--aura.counter < 1) part.render.aura = null;
+                    }
+
                     // part sprite
                     var sprite = part.render.sprite,
                         texture = _getTexture(render, sprite.texture);

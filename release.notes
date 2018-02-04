@@ -5,6 +5,37 @@ Release notes
 
 
 
+--- v. 1.5, 04/02/2018 ---
+
+• Obstacles are destroyable now. By bullets only.
+{condition} value added to the object's structure. It measured in the same units as lives of creatures.
+E.g. {condition = 10} means this object can be destroyed with one bullet.
+
+• Dynamites added.
+Use {dynamitesProbability} const of the config file to tune amount of dynamites.
+
+• Stars added. Each star has it's own effect. Please see http://appcraft.pro/pubg/docs/en/objects.html for more details.
+{type} and {shape} values added to the object's structure so you can determine kind of each object.
+{objectTypes} structure contains the following values: {obstacle: 0, dynamite: 1, star: 2}. 
+{shape} can be used to determine type of a star, use {starShapes} with the following values: 
+{levelup: 0, healing: 1, poisoned: 2, frozen: 3, death: 4}.
+Use {starsProbability} const of the config file to tune amount of stars.
+
+• Auras added. Auras show a state of a creature: is it spelling, poisoned or frozen.
+
+• Ground walls thickened to prevent objects fly through it.
+
+• {message} value added to the creature's struct. You can use it to read phrases of other creatures.
+
+• Kills and Deaths labels shortened to Ks and Ds respectively make leaderboard panel more compact.
+
+• Leaderboard displays up to 20 rows now. Others are under the cut.
+
+• Increasing and decreasing creatures count buttons added.
+Now you can change enemies amount whithout restarting the game.
+
+
+
 --- v. 1.4, 27/01/2018 ---
 
 • Frequency of the bullet generator changed. Bullets appear faster now.

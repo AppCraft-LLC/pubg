@@ -31,6 +31,8 @@ let actions = { none: 0, move: 1, rotate: 2, turn: 3, shoot: 4, jump: 5, eat: 6,
     kinds = { rhino: 0, bear: 1, moose: 2, bull: 3, runchip: 4, miner: 5, sprayer: 6, splitpus: 7 },
     ground = { width: 0, height: 0 },
     eventTypes = { wound: 0, murder: 1, death: 2, upgrade: 3, birth: 4, spell: 5 },
+    objectTypes = { obstacle: 0, dynamite: 1, star: 2 },
+    starShapes = { levelup: 0, healing: 1, poisoned: 2, frozen: 3, death: 4 },
     engineRefExt;
 
 function pubg() {
@@ -81,7 +83,10 @@ function battleGround() {
             { fill: "#42FF00", stroke: "#299E00" },
             { fill: "#FF581E", stroke: "#C93400" },
             { fill: "#00AEFF", stroke: "#0093A0" }
-        ];
+        ],
+        specifiedAliveCreaturesCount = maxAliveCreatures,
+        maxObstaclesAmount = 0,
+        exploded = false;
 
     // Main consts
     const loopStep = 0.1,
@@ -91,6 +96,8 @@ function battleGround() {
           torqueForce = 0.5,
           isCreature = 2,
           isBullet = 3,
+          isObstacle = 4,
+          isStar = 5,
           creatureRad = 30,
           bulletRad = 5,
           container = document.getElementById("container"),
@@ -102,7 +109,12 @@ function battleGround() {
           maxBulletsOnGround = 20,
           summonInterval = 10,
           fullLeaderboardInterval = 50,
-          noBulletsInterval = 40;
+          noBulletsInterval = 40,
+          spellAuraColor = "red",
+          posionedAuraColor = "green",
+          frozenAuraColor = "blue",
+          levelupAuraColor = "yellow",
+          untilTurnedOff = 100000;
 
     // Create an engine
     let engine = Engine.create(),
@@ -153,24 +165,39 @@ function battleGround() {
         guttapercha: false,
         freezeCounter: 0,
         subzero: false,
-        counter: 0  // spell counter
+        counter: 0,  // spell counter
+        force: null
     };
 
     let Bullet = {
         body: null,
         shooter: null,
-        shell: shells.steel
+        shell: shells.steel,
+        force: null
     };
 
     let Obstacle = {
         body: null,
-        kind: 0
+        shape: 0,
+        sprites: 3,
+        firmness: 0,
+        condition: 0,
+        type: objectTypes.obstacle,
+        force: null
     };
 
     let Event = {
         type: 0,
         payload: null 
     };
+
+    let Aura = {
+        texture: null,
+        angle: 0,
+        spin: 0,
+        duration: 0,
+        counter: 0
+    }
 
     function rainbow() {
         let h = randomInt(0, 359),
@@ -194,8 +221,12 @@ function battleGround() {
     }
 
     let loadedBrainsCount = 0;
-    bulletsGeneratorFrequency = 95 - maxAliveCreatures * bulletsGeneratorFrequencyPerCreature
-    if (bulletsGeneratorFrequency < 20) bulletsGeneratorFrequency = 20;
+    setBulletGeneratorFrequency();
+
+    function setBulletGeneratorFrequency() {
+        bulletsGeneratorFrequency = 95 - specifiedAliveCreaturesCount * bulletsGeneratorFrequencyPerCreature
+        if (bulletsGeneratorFrequency < 20) bulletsGeneratorFrequency = 20;    
+    }
 
     function sourceLoaded() {
         loadedBrainsCount++;
@@ -265,6 +296,7 @@ function battleGround() {
 
         let r = 1;
         for (let i = 0; i < items.length; i++) {
+            if (r > 20) break;
             let item = items[i],
                 row;
             if (!item.alive && !fullLeaderboard) continue;
@@ -346,7 +378,7 @@ function battleGround() {
 
     function nextCreature() {
 
-        if (creatures.length >= maxAliveCreatures) return;
+        if (creatures.length >= specifiedAliveCreaturesCount) return;
 
         let nextId = nextDeadBrainFromId(lastActivatedBrainId + 1);
         if (nextId < 0) {
@@ -363,60 +395,171 @@ function battleGround() {
         incarnateCreatureForBrain(nextId);
     }
 
-    function newObstacle(kind) {
+    function newRandomObstacle() {
+        let obsType = Math.random() < dynamitesProbability ? objectTypes.dynamite : objectTypes.obstacle;
+        newObstacle(obsType);
+    }
 
-        const margin = creatureRad * 2;
+    function newObstacle(type) {
+
+        let shape = type == objectTypes.dynamite ? randomInt(0, 1) : randomInt(0, 15);
+
         let d = 1.0,
-            w, h, r = 0,
+            w, h, r = 0, f = 0,     // f - firmness
+            s = 3,                  // sprites, default 3
             rs = 1.0,
             fa = 0.09;
+
+        if (type == objectTypes.obstacle)
+            switch (shape) {
+                case 0:     w = 60;     h = 60;     f = 50;     break;                                  // Wooden box
+                case 1:     w = 88;     h = 60;     f = 70;     break;                                  // Wooden block
+                case 2:     w = 11;     h = 40;     d = 0.5;    fa = 0.02;  s = 2;     f = 15;   break; // Bottle
+                case 3:     w = 50;     h = 50;     d = 0.2;    s = 2;      f = 15;    break;           // Carton
+                case 4:     w = 55;     h = 55;     d = 5.5;    fa = 0.1;   f = 90;    break;           // Steel box
+                case 5:     w = 100;    h = 31;     f = 60;     break;                                  // Log
+                case 6:     w = 88;     h = 60;     d = 20.0;   fa = 0.1;   f = 110;   break;           // Concrete block
+                case 7:     r = 22;     d = 2.0;    f = 90;     break;                                  // Large gear
+                case 8:     r = 9;      d = 2.0;    s = 2;      f = 80;     break;                      // Small gear
+                case 9:     r = 25;     d = 0.8;    fa = 0.05;  f = 30;     break;                      // Lifebuoy
+                case 10:    r = 40;     d = 20.0;   fa = 0.1;   f = 160;    break;                      // Large stone
+                case 11:    r = 27;     d = 20.0;   fa = 0.1;   f = 150;    break;                      // Middle stone
+                case 12:    r = 15;     d = 20.0;   fa = 0.1;   f = 140;    break;                      // Small stone
+                case 13:    r = 15;     d = 1.0;    f = 100;    break;                                  // Tambourine
+                case 14:    r = 34;     d = 0.7;    fa = 0.05;  f = 40;     break;                      // Large tire
+                case 15:    r = 20;     d = 0.7;    fa = 0.05;  f = 30;     break;                      // Small tire
+            }
+        if (type == objectTypes.dynamite) 
+            switch (shape) {
+                case 0:    w = 55;     h = 55;     d = 5.5;    fa = 0.1;   f = 5;     s = 1;    break;  // Large dynamite
+                case 1:    w = 35;     h = 35;     d = 5.5;    fa = 0.1;   f = 5;     s = 1;    break;  // Small dynamite
+            }
+    
+        createObstacle(type, shape, s, f, 0, 0, w, h, r, rs, fa, d, { x: 0, y: 0 }, 0);
+    }
+
+    function newStar(pos, vel) {
+        let shape = 0,
+            s = 1,
+            f = 20,
+            r = 11,
+            rs = 1.0,
+            fa = 0.09,
+            d = 1.0,
+            tor = Math.random() * 2.0 - 1.0;
+        // Equal probability for each type of stars
+        shape = randomInt(0, 4); 
+        // Death star is exception, it's probability is small
+        if (Math.random() < 0.1) shape = starShapes.death;
+        createObstacle(objectTypes.star, shape, s, f, pos.x, pos.y, 0, 0, r, rs, fa, d, vel, tor);
+    }
+
+    function createObstacle(type, shape, sprites, firmness, x, y, w, h, r, rs, fa, d, vel, tor) {
         
-        switch (kind) {
-            case 0:     w = 60;     h = 60;     break;                          // Wooden box
-            case 1:     w = 88;     h = 60;     break;                          // Wooden block
-            case 2:     w = 11;     h = 40;     d = 0.5;    fa = 0.02;   break; // Bottle
-            case 3:     w = 50;     h = 50;     d = 0.2;    break;              // Carton
-            case 4:     w = 55;     h = 55;     d = 5.5;    fa = 0.1;    break; // Steel box
-            case 5:     w = 100;    h = 31;     break;                          // Log
-            case 6:     w = 88;     h = 60;     d = 20.0;   fa = 0.1;    break; // Concrete block
-            case 7:     r = 22;    d = 2.0;     break;                          // Large gear
-            case 8:     r = 9;     d = 2.0;     break;                          // Small gear
-            case 9:     r = 25;    d = 0.8;     fa = 0.05;  break;              // Lifebuoy
-            case 10:    r = 40;    d = 20.0;    fa = 0.1;   break;              // Large stone
-            case 11:    r = 27;    d = 20.0;    fa = 0.1;   break;              // Middle stone
-            case 12:    r = 15;    d = 20.0;    fa = 0.1;   break;              // Small stone
-            case 13:    r = 15;    d = 1.0;     break;                          // Tambourine
-            case 14:    r = 34;    d = 0.7;     fa = 0.05; break;               // Large tire
-            case 15:    r = 20;    d = 0.7;     fa = 0.05; break;               // Small tire
-        }
-
+        const margin = creatureRad * 2;
         let obstacle = Object.create(Obstacle);
-        obstacle.kind = kind;
-        d *= 0.001 /* default density */;    
+        d *= 0.001 /* default density */;
+        obstacle.shape = shape;
+        obstacle.sprites = sprites;
+        obstacle.firmness = firmness;
+        obstacle.condition = firmness - 1;
+        obstacle.type = type;
 
-        let x = randomInt(margin, width - margin),
+        if (x == 0) {
+            x = randomInt(margin, width - margin),
             y = randomInt(margin, height - margin);
+        }
 
         let body = r == 0 ? Bodies.rectangle(x, y, w, h) : Bodies.circle(x, y, r);
         body.restitution = rs;
         body.frictionAir = fa;
         body.label = obstacle;
+        body.collisionFilter.category = type == objectTypes.star ? isStar : isObstacle;
         Body.setDensity(body, d);
-        body.render.sprite.texture = `./img/obstacles/${kind}.png`;
-
+        
         Body.setAngle(body, randomAngle());
         obstacle.body = body;
         World.add(world, body);
         obstacles.push(obstacle);
+        // Set sprite
+        damageObstacle(obstacle, 0);
+
+        if (vel.x != 0) Body.setVelocity(body, vel);
+        if (tor != 0) Body.setAngularVelocity(body, tor);
     }
 
-    function updateCreatureLevel(creature) {
+    function damageObstacle(obstacle, damage) {
+        let oldSprite = sprite(obstacle);
+        obstacle.condition -= damage;
+        // Check obstacle for crash
+        if (obstacle.condition <= 0) {
+            let type = obstacle.type,
+                shape = obstacle.shape,
+                pos = obstacle.body.position,
+                vel = obstacle.body.velocity;
+            obstacles.splice(obstacles.indexOf(obstacle), 1);
+            Matter.Composite.remove(world, obstacle.body);
+            // Explosions 
+            if (type == objectTypes.dynamite) {
+                let rad = shape == 0 ? 300 : 200,
+                    dmg = shape == 0 ? 100 : 70,
+                    frc = shape == 0 ? 0.1 : 0.08;
+                // Damage creatures, objects & bullets
+                creatures.forEach(it => { damage(it); });
+                obstacles.forEach(it => { damage(it); });
+                bullets.forEach(it => { damage(it); });
+                function damage(obj) {
+                    let dist = distanceBetweenPoints(obj.body.position, pos);
+                    if (dist < rad) {
+                        let eff = 1.0 - (dist / rad),
+                            hurt = Math.round(dmg * eff),
+                            pwr = obj.body.mass * frc * eff,
+                            dead = false,
+                            type = isNumber(obj.lives) ? 0 : isNumber(obj.shell) ? 1 : 2;
+                        switch (type) {
+                            case 0: // creature
+                                if (!obj.invulnerable) dead = hurtCreature(obj, hurt, null);
+                                break;
+                            case 2: // obstacle
+                                // Explosions don't damage stars
+                                dead = damageObstacle(obj, obj.type == objectTypes.star ? 0 : hurt);
+                            default: // bullet
+                                break;
+                        }
+                        if (!dead) {
+                            let angle = angleBetweenPoints(pos, obj.body.position),
+                                vector = { x: Math.cos(angle) * pwr, 
+                                           y: Math.sin(angle) * pwr };
+                            // Cache force
+                            obj.force = vector;
+                        }
+                    }
+                }
+                exploded = true;
+            }
+            // Stars
+            else if (type == objectTypes.obstacle) {
+                    if (Math.random() < starsProbability) newStar(pos, vel);
+                }
+            return true;
+        }
+        let newSprite = sprite(obstacle);
+        if (newSprite != oldSprite || damage == 0 /* force reload*/ ) {
+            obstacle.body.render.sprite.texture = `./img/obstacles/${obstacle.type}_${obstacle.shape}_${newSprite}.png`;
+        }
+        function sprite(obs) { return Math.floor(obs.condition / obs.firmness * obs.sprites); }
+        return false;
+    }
+
+    function updateCreatureLevel(creature, force) {
         let level = creature.kills >= killsToLevelUp[1] ? 2 : creature.kills >= killsToLevelUp[0] ? 1 : 0;
-        if (level != creature.level) {
+        if (level > creature.level || force) {
+            if (force) level = creature.level;
             creature.level = level;
             creature.lives = creatureMaxLives[level];
             creature.energy = creatureMaxEnergy[level];
             updateCreatureEmbodiment(creature);
+            turnAuraOn(creature, levelupAuraColor, 120);
             // Emit upgrade event
             let event = Object.create(Event);
             event.type = eventTypes.upgrade;
@@ -449,7 +592,8 @@ function battleGround() {
                  speed: c.body.speed,
                  angularVelocity: c.body.angularVelocity,
                  poisoned: c.poisonCounter > 0, 
-                 spelling: c.counter > 0 };
+                 spelling: c.counter > 0,
+                 message: c.message };
     }
 
     function obfuscateBullet(b) {
@@ -467,7 +611,10 @@ function battleGround() {
                  position: o.body.position,
                  velocity: o.body.velocity,
                  speed: o.body.speed,
-                 bounds: o.body.bounds };
+                 bounds: o.body.bounds,
+                 type: o.type,
+                 shape: o.shape,
+                 condition: o.condition };
     }
 
     /**
@@ -529,18 +676,60 @@ function battleGround() {
         return a;
     }
 
+    function changeMaxCreaturesCounterBy(value) {
+        specifiedAliveCreaturesCount += value;
+        if (specifiedAliveCreaturesCount < 3) specifiedAliveCreaturesCount = 3;
+        if (specifiedAliveCreaturesCount > 8) specifiedAliveCreaturesCount = 8;
+        setBulletGeneratorFrequency();
+        let count = document.getElementById("count");
+        if (count) count.innerHTML = `${specifiedAliveCreaturesCount}`;
+    }
+
+    function turnAuraOn(creature, color, duration) {
+        const anim = 30;
+        let aura = Object.create(Aura),
+            prevc = creature.body.render.aura ? creature.body.render.aura.counter : 0,
+            prevd = creature.body.render.aura ? creature.body.render.aura.duration : 0,
+            delta = 0;
+        aura.texture = `./img/effects/aura_${color}.png`;
+        // From ±0.01 to ±0.04
+        aura.spin = Math.random() * 0.06 - 0.03;
+        aura.spin += aura.spin > 0 ? 0.01 : -0.01;
+        // Continue previous aura animation if needed
+        if (prevc > 0) {
+            if (prevd - prevc < anim) delta = prevd - prevc;
+            else if (prevc < anim) delta = prevc; 
+            else delta = anim;
+        }
+        aura.duration = duration + delta;
+        aura.counter = duration;
+        creature.body.render.aura = aura;
+    }
+
+    function turnAuraOff(creature) {
+        if (creature.body.render.aura) creature.body.render.aura.counter = 50;
+    }
+
+    // Bind interface actions
+    let plus = document.getElementById("plus");
+    if (plus) plus.onclick = function() { changeMaxCreaturesCounterBy(1); return false; }
+    let minus = document.getElementById("minus");
+    if (minus) minus.onclick = function() { changeMaxCreaturesCounterBy(-1); return false; }
+
     // Freeze enums so brains can't change it
     Object.freeze(actions);
     Object.freeze(kinds);
     ground = { width: width, height: height };
     Object.freeze(ground);
     Object.freeze(eventTypes);
+    Object.freeze(objectTypes);
+    Object.freeze(starShapes);
     Object.freeze(shells);
     Object.freeze(bulletColors);
     
     // Create ground edges
     const blockMrg = 200,
-          blockW = 100,
+          blockW = 1000,
           blockOff = blockW / 2;
     
     let opt = { isStatic: true };
@@ -554,10 +743,8 @@ function battleGround() {
     world.gravity.x = world.gravity.y = 0;
 
     // Generate some obstacles
-    let amount = Math.ceil(width * height / 1000 / obstaclesDensity);
-    for (let i = 0; i < amount; i++) {
-        newObstacle(Math.round(Math.random() * 15.0));
-    }
+    maxObstaclesAmount = Math.ceil(width * height / 1000 / obstaclesDensity);
+    for (let i = 0; i < maxObstaclesAmount; i++) newRandomObstacle();
     
     // Drop some bullets
     for (let i = 0; i < 5; i++) {
@@ -586,11 +773,25 @@ function battleGround() {
 
     // Main loop logic
     Events.on(engine, 'beforeUpdate', function(event) {
-
+    
         if (creatures.length < 0) return;
         
         loopCounter += loopStep;
-        if (loopCounter < 0) return;
+        if (loopCounter < 0) {
+            if (exploded) {
+                exploded = false; 
+                creatures.forEach(it => { force(it); });
+                obstacles.forEach(it => { force(it); });
+                bullets.forEach(it => { force(it); });
+                function force(it) {
+                    if (it.force) {
+                        Body.applyForce(it.body, it.body.position, it.force);
+                        it.force = null;
+                    }
+                }
+            }
+            return;
+        }
         loopCounter = -1;
 
         if (leaderboardCounter > 0 && --leaderboardCounter < 1) {
@@ -631,13 +832,20 @@ function battleGround() {
                     if (it.poisoner) it.poisoner = false;
                     if (it.guttapercha) it.guttapercha = false;
                     if (it.subzero) it.subzero = false;
+                    turnAuraOff(it);
                 }
             }
             if (it.poisonCounter > 0) {
-                if (--it.poisonCounter <= 0) it.poisonCounter = 0;
+                if (--it.poisonCounter <= 0) {
+                    it.poisonCounter = 0;
+                    turnAuraOff(it);
+                }
             }
             if (it.freezeCounter > 0) {
-                if (--it.freezeCounter <= 0) it.freezeCounter = 0;
+                if (--it.freezeCounter <= 0) {
+                    it.freezeCounter = 0;
+                    turnAuraOff(it);
+                }
             }
 
             enemies.push(obfuscateCreature(it));
@@ -760,7 +968,8 @@ function battleGround() {
         // Summon new creature if needed 
         if (summonCounter++ > summonInterval) {
             summonCounter = 0;
-            if (creatures.length < maxAliveCreatures) nextCreature();
+            if (creatures.length < specifiedAliveCreaturesCount) nextCreature();
+            else if (obstacles.length < maxObstaclesAmount) newRandomObstacle();
         }
         
     });
@@ -779,69 +988,17 @@ function battleGround() {
                 blt = pair.bodyA;
                 body = pair.bodyB;
             }
+            // Creature <> bullet collision
             if (blt && body && body.label && blt.label) {
 
                 let creature = body.label;
                 let bullet = blt.label;
 
                 if (blt.speed >= dangerousBulletSpeed && !creature.invulnerable) {
-                    creature.lives -= bulletDamage;
-                    let shooter = bullet.shooter;
-                    if (shooter && shooter.body == creature.body) shooter = null;
-
-                    // Deadly shot
-                    if (creature.lives <= 0) {
-
-                        // Emit murder/death event 
-                        let event = Object.create(Event);
-                        event.payload = [obfuscateCreature(creature)];
-                        
-                        if (shooter && shooter.body != creature.body) {
-                            shooter.kills++;
-                            shooter.brain.kills++;
-                            updateCreatureLevel(shooter);
-                            event.type = eventTypes.murder;
-                            event.payload.push(obfuscateCreature(shooter));
-                        } else {
-                            event.type = eventTypes.death;
-                        }
-                        happened.push(event);
-
-                        let brain = creature.brain,
-                            blts = creature.bullets,
-                            pos = body.position;
-                        brain.deaths++;
-                        brain.alive = false;
-                        body.label = null;
-                        Matter.Composite.remove(world, body);
-                        creatures.splice(creatures.indexOf(creature), 1);
-                        for (let i = 0; i < blts; i++) {
-                            shot(pos, randomAngle(), null, false, shells.steel);
-                        }
-
-                        calculateIQForVictimAndKiller(brain, shooter ? shooter.brain : null);
-                        leaderboardCounter = fullLeaderboardInterval;
-                        fullLeaderboard = true;
-                        updateLeaderboard();
-                    }
-                    else {
-
-                        // Emit wound event
-                        let event = Object.create(Event);
-                        event.type = eventTypes.wound;
-                        event.payload = [obfuscateCreature(creature)];
-                        if (shooter) event.payload.push(obfuscateCreature(shooter));
-                        happened.push(event);
-
-                        if (bullet.shell == shells.poisoned) creature.poisonCounter = poisonDuration;
-                        if (bullet.shell == shells.ice) creature.freezeCounter = freezeDuration;
-
-                        updateCreatureEmbodiment(creature);
-                    }
+                    hurtCreature(creature, bulletDamage, bullet);
                 }
                 else {
                     if (creature.bullets < creatureMaxBullets[creature.level]) {
-                        
                         // Pick this bullet
                         bullets.splice(bullets.indexOf(bullet), 1);
                         blt.label = null;
@@ -850,8 +1007,146 @@ function battleGround() {
                     }
                 }
             }
+            // Obstacle <> bullet collision
+            else {
+                let blt, obs;
+                if (pair.bodyA.collisionFilter.category == isObstacle && pair.bodyB.collisionFilter.category == isBullet) {
+                    blt = pair.bodyB;
+                    obs = pair.bodyA;
+                }
+                if (pair.bodyB.collisionFilter.category == isObstacle && pair.bodyA.collisionFilter.category == isBullet) {
+                    blt = pair.bodyA;
+                    obs = pair.bodyB;
+                }
+                if (blt && obs && obs.label && blt.speed >= dangerousBulletSpeed) { 
+                    damageObstacle(obs.label, bulletDamage);
+                }
+                // Creature <> star collision
+                else {
+                    let star, body;
+                    if (pair.bodyA.collisionFilter.category == isCreature && pair.bodyB.collisionFilter.category == isStar) {
+                        star = pair.bodyB;
+                        body = pair.bodyA;
+                    }
+                    if (pair.bodyB.collisionFilter.category == isCreature && pair.bodyA.collisionFilter.category == isStar) {
+                        star = pair.bodyA;
+                        body = pair.bodyB;
+                    }
+                    if (star && body && body.label && star.label) {
+                        // Pick the star
+                        let obj = star.label,
+                            shape = obj.shape,
+                            c = body.label;
+                        obstacles.splice(obstacles.indexOf(obj), 1);
+                        star.label = null;
+                        Matter.Composite.remove(world, star);
+                        // Apply effect
+                        switch (shape) {
+                            case starShapes.levelup:
+                                if (c.level < 2) c.level++;
+                                updateCreatureLevel(c, true);
+                                break;
+                            case starShapes.healing:
+                                c.lives = creatureMaxLives[c.level];
+                                c.energy = creatureMaxEnergy[c.level];
+                                updateCreatureEmbodiment(c);                
+                                break;
+                            case starShapes.poisoned:
+                                poisonCreature(c);
+                                break;
+                            case starShapes.frozen:
+                                freezeCreature(c);
+                                break;
+                            case starShapes.death:
+                                // Add dynamites first
+                                for (let i = 0; i < 4; i++) newObstacle(objectTypes.dynamite);
+                                // Make all bullets guttapercha and apply force to them
+                                bullets.forEach(b => {
+                                    b.body.restitution = guttaperchaRestitution;
+                                    b.body.frictionAir = guttaperchaAirFriction;
+                                    b.body.render.fillStyle = bulletColors[shells.rubber].fill;
+                                    b.body.render.strokeStyle = bulletColors[shells.rubber].stroke;
+                                    b.shell = shells.rubber;
+                                    let angle = randomAngle();
+                                    Body.setVelocity(b.body, { x: Math.cos(angle) * bulletForce, y: Math.sin(angle) * bulletForce });
+                                });
+                                break; 
+                        }
+                    }
+                }
+            }
         }
     });
+
+    function hurtCreature(creature, damage, bullet) {
+        creature.lives -= damage;
+        let shooter = bullet ? bullet.shooter : null;
+        if (shooter && shooter.body == creature.body) shooter = null;
+
+        // Deadly shot
+        if (creature.lives <= 0) {
+
+            // Emit murder/death event
+            let event = Object.create(Event);
+            event.payload = [obfuscateCreature(creature)];
+            
+            if (shooter && shooter.body != creature.body) {
+                shooter.kills++;
+                shooter.brain.kills++;
+                updateCreatureLevel(shooter, false);
+                event.type = eventTypes.murder;
+                event.payload.push(obfuscateCreature(shooter));
+            } else {
+                event.type = eventTypes.death;
+            }
+            happened.push(event);
+
+            let brain = creature.brain,
+                blts = creature.bullets,
+                pos = creature.body.position;
+            brain.deaths++;
+            brain.alive = false;
+            creature.body.label = null;
+            Matter.Composite.remove(world, creature.body);
+            creatures.splice(creatures.indexOf(creature), 1);
+            for (let i = 0; i < blts; i++) {
+                shot(pos, randomAngle(), null, false, shells.steel);
+            }
+
+            calculateIQForVictimAndKiller(brain, shooter ? shooter.brain : null);
+            leaderboardCounter = fullLeaderboardInterval;
+            fullLeaderboard = true;
+            updateLeaderboard();
+            return true;
+        }
+        else {
+
+            // Emit wound event
+            let event = Object.create(Event);
+            event.type = eventTypes.wound;
+            event.payload = [obfuscateCreature(creature)];
+            if (shooter) event.payload.push(obfuscateCreature(shooter));
+            happened.push(event);
+
+            if (bullet) {
+                if (bullet.shell == shells.poisoned) poisonCreature(creature);
+                if (bullet.shell == shells.ice) freezeCreature(creature);
+            }
+
+            updateCreatureEmbodiment(creature);
+            return false;
+        }
+    }
+
+    function poisonCreature(creature) {
+        creature.poisonCounter = poisonDuration;
+        turnAuraOn(creature, posionedAuraColor, untilTurnedOff);
+    }
+
+    function freezeCreature(creature) {
+        creature.freezeCounter = freezeDuration;
+        turnAuraOn(creature, frozenAuraColor, untilTurnedOff);
+    }
 
     // Draw indicators and messages
     Events.on(render, "afterRender", function(event) {
@@ -873,16 +1168,16 @@ function battleGround() {
             ctx.fillStyle = color;
             ctx.strokeStyle = Common.shadeColor(color, -20);
             ctx.lineWidth = 1;
-            if (it.counter > 0) {
-                ctx.font = `600 ${s+1}px Verdana`;
-                ctx.textBaseline = "hanging";
-                ctx.fillText("S", x - sh, y);
-                ctx.strokeText("S", x - sh, y);
-            }
-            else {
+            // if (it.counter > 0) {
+            //     ctx.font = `600 ${s+1}px Verdana`;
+            //     ctx.textBaseline = "hanging";
+            //     ctx.fillText("S", x - sh, y);
+            //     ctx.strokeText("S", x - sh, y);
+            // }
+            // else {
                 ctx.fillRect(x - sh, y, s, s);
                 ctx.strokeRect(x - sh, y, s, s);
-            }
+            // }
 
             // Colors
             let livesFill = "#800000",
@@ -1118,7 +1413,10 @@ function battleGround() {
         creature.energy -= eatBulletEnergyCost;
         creature.lives += livesPerEatenBullet;
         if (creature.lives > creatureMaxLives[creature.level]) creature.lives = creatureMaxLives[creature.level];
-        if (creature.poisonCounter > 0) creature.poisonCounter = 0;
+        if (creature.poisonCounter > 0) { 
+            creature.poisonCounter = 0;
+            turnAuraOff(creature);
+        }
         updateCreatureEmbodiment(creature);
     }
 
@@ -1149,6 +1447,7 @@ function battleGround() {
                     c.energy -= invulnerableEnergyCost;
                     c.invulnerable = true;
                     c.counter = invulnerableDuration;
+                    turnAuraOn(c, spellAuraColor, untilTurnedOff);
                 }
                 break;
         
@@ -1157,6 +1456,7 @@ function battleGround() {
                     c.energy -= magnetEnergyCost;
                     c.magnet = true;
                     c.counter = magnetDuration;
+                    turnAuraOn(c, spellAuraColor, untilTurnedOff);
                 }
                 break;
         
@@ -1165,6 +1465,7 @@ function battleGround() {
                     c.energy -= poisonerEnergyCost;
                     c.poisoner = true;
                     c.counter = poisonerDuration;
+                    turnAuraOn(c, spellAuraColor, untilTurnedOff);
                 }
                 break;
         
@@ -1173,6 +1474,7 @@ function battleGround() {
                     c.energy -= guttaperchaEnergyCost;
                     c.guttapercha = true;
                     c.counter = guttaperchaDuration;
+                    turnAuraOn(c, spellAuraColor, untilTurnedOff);
                 }
                 break;
 
@@ -1191,7 +1493,7 @@ function battleGround() {
                         if (c.bullets > creatureMaxBullets[c.level]) c.bullets = creatureMaxBullets[c.level];
                         updateCreatureEmbodiment(target);
                         updateCreatureEmbodiment(c);
-                        c.counter = 15; // for indication only
+                        turnAuraOn(c, spellAuraColor, 120);
                     }
                 }
                 break;
@@ -1203,7 +1505,7 @@ function battleGround() {
                         vector = { x: Math.cos(angle) * force, 
                                    y: Math.sin(angle) * force };
                     Body.applyForce(target.body, target.body.position, vector);
-                    c.counter = 5; // for indication only
+                    turnAuraOn(c, spellAuraColor, 120);
                 }
                 break;
 
@@ -1212,6 +1514,7 @@ function battleGround() {
                     c.energy -= subzeroEnergyCost;
                     c.subzero = true;
                     c.counter = subzeroDuration;
+                    turnAuraOn(c, spellAuraColor, untilTurnedOff);
                 }
                 break;
         }

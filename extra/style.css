@@ -48,3 +48,19 @@ td {
 
 a { font-size: 100%; text-decoration: none; }
 a:hover { text-decoration: none; }
+
+a.button {
+    font-family: Courier New, Courier, monospace;
+    font-weight: 900;
+    font-size: 150%;
+    background: rgba(201, 201, 201, 0.5);
+    border-radius: 14px;
+    -moz-border-radius: 14px;
+    -webkit-border-radius: 14px;
+    padding: 2pt 6.2pt 2pt 6.2pt;
+}
+
+span.count {
+    font-size: 110%;
+    padding: 0pt 4pt 0pt 4pt;
+}
