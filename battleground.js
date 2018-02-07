@@ -109,7 +109,7 @@ function battleGround() {
           maxBulletsOnGround = 20,
           summonInterval = 10,
           fullLeaderboardInterval = 50,
-          noBulletsInterval = 40,
+          noBulletsInterval = 30,
           spellAuraColor = "red",
           posionedAuraColor = "green",
           frozenAuraColor = "blue",
@@ -482,13 +482,13 @@ function battleGround() {
         World.add(world, body);
         obstacles.push(obstacle);
         // Set sprite
-        damageObstacle(obstacle, 0);
+        damageObstacle(obstacle, 0, null);
 
         if (vel.x != 0) Body.setVelocity(body, vel);
         if (tor != 0) Body.setAngularVelocity(body, tor);
     }
 
-    function damageObstacle(obstacle, damage) {
+    function damageObstacle(obstacle, damage, attacker) {
         let oldSprite = sprite(obstacle);
         obstacle.condition -= damage;
         // Check obstacle for crash
@@ -518,11 +518,11 @@ function battleGround() {
                             type = isNumber(obj.lives) ? 0 : isNumber(obj.shell) ? 1 : 2;
                         switch (type) {
                             case 0: // creature
-                                if (!obj.invulnerable) dead = hurtCreature(obj, hurt, null);
+                                if (!obj.invulnerable) dead = hurtCreature(obj, hurt, null, attacker);
                                 break;
                             case 2: // obstacle
                                 // Explosions don't damage stars
-                                dead = damageObstacle(obj, obj.type == objectTypes.star ? 0 : hurt);
+                                dead = damageObstacle(obj, obj.type == objectTypes.star ? 0 : hurt, null);
                             default: // bullet
                                 break;
                         }
@@ -995,7 +995,7 @@ function battleGround() {
                 let bullet = blt.label;
 
                 if (blt.speed >= dangerousBulletSpeed && !creature.invulnerable) {
-                    hurtCreature(creature, bulletDamage, bullet);
+                    hurtCreature(creature, bulletDamage, bullet, null);
                 }
                 else {
                     if (creature.bullets < creatureMaxBullets[creature.level]) {
@@ -1019,7 +1019,7 @@ function battleGround() {
                     obs = pair.bodyB;
                 }
                 if (blt && obs && obs.label && blt.speed >= dangerousBulletSpeed) { 
-                    damageObstacle(obs.label, bulletDamage);
+                    damageObstacle(obs.label, bulletDamage, blt.label ? blt.label.shooter : null);
                 }
                 // Creature <> star collision
                 else {
@@ -1067,6 +1067,7 @@ function battleGround() {
                                     b.body.render.fillStyle = bulletColors[shells.rubber].fill;
                                     b.body.render.strokeStyle = bulletColors[shells.rubber].stroke;
                                     b.shell = shells.rubber;
+                                    b.shooter = null;   // Do not count IQ
                                     let angle = randomAngle();
                                     Body.setVelocity(b.body, { x: Math.cos(angle) * bulletForce, y: Math.sin(angle) * bulletForce });
                                 });
@@ -1078,10 +1079,11 @@ function battleGround() {
         }
     });
 
-    function hurtCreature(creature, damage, bullet) {
+    function hurtCreature(creature, damage, bullet, attacker) {
         creature.lives -= damage;
         let shooter = bullet ? bullet.shooter : null;
         if (shooter && shooter.body == creature.body) shooter = null;
+        if (attacker) shooter = attacker;
 
         // Deadly shot
         if (creature.lives <= 0) {
