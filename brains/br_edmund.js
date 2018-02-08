@@ -4,7 +4,7 @@
 //
 //  The MIT License (MIT)
 //
-//  Copyright (c) 2018 AppCraft LLC, http://appcraft.pro/pubg/
+//  Copyright (c) 2018 AppCraft LLC, http://appcraft.pro
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 //
-//  Please read documentation at http://appcraft.pro/pubg/docs/
+//  Please read documentation at https://github.com/AppCraft-LLC/pubg/wiki
 
 /**
  * -----------------------
@@ -63,7 +63,7 @@
  *                       { do: actions.spell }
  *                       Costs a lot of energy.
  *                       Some spells require additional params, 
- *                       please see http://appcraft.pro/pubg/docs/en/creature-actions.html
+ *                       please see https://github.com/AppCraft-LLC/pubg/wiki/Actions#rhino
  *                       for more details.
  * }
  * 
@@ -90,7 +90,7 @@
  *        Helpers
  * -----------------------
  * 
- * // Returns distance between two objects. Each of them must has {postision} property with {x} and {y} in it/
+ * // Returns distance between two objects. Each of them must has {position} property with {x} and {y} in it/
  * distanceBetween(obj1, obj2)
  * 
  * // Distance between two points.
@@ -136,9 +136,6 @@ br_edmund = {
     /** 
      * Describe what logic you implemented in this brain
      * so other users can understand your genius thoughts.
-     * It's not used in the game directly, rather
-     * leaderboards (http://appcraft.pro/pubg/docs/en/leaderboard.html) 
-     * takes brain's description from this variable.
      * */
     description: "The basic algorithm for writing your bots",
 

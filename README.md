@@ -27,10 +27,8 @@ If you see just gray background and nothing else then check the console: may be 
 
 5. You can also edit other consts in the `config.js` to change the rules of the game, e.g. set `shuffleBrains` to `false` to start the game with your brain first, or change `maxAliveCreatures` to battle with less or more enemies at the same time.
 
-6. Try your skills fighting againts best brains. See [Leaderboard](http://appcraft.pro/pubg/docs/en/leaderboard.html) section of the [documentation](http://appcraft.pro/pubg/docs/en/index.html) for more details.
-
-7. Read [documentation](http://appcraft.pro/pubg/docs/en/index.html) to learn rules of the game, creatures specifications, examples and other details. Good luck !)
+6. Read [documentation](https://github.com/AppCraft-LLC/pubg/wiki) to learn rules of the game, creatures specifications, examples and other details. Good luck !)
 
 ## License
 
-PUBG is distributed under the [MIT license](http://appcraft.pro/pubg/docs/en/license.html).
+PUBG is distributed under the [MIT license](https://github.com/AppCraft-LLC/pubg/blob/master/LICENSE.md).

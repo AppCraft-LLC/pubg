@@ -4,7 +4,7 @@
 //
 //  The MIT License (MIT)
 //
-//  Copyright (c) 2018 AppCraft LLC, http://appcraft.pro/pubg/
+//  Copyright (c) 2018 AppCraft LLC, http://appcraft.pro
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 //
-//  Please read documentation at http://appcraft.pro/pubg/docs/
+//  Please read documentation at https://github.com/AppCraft-LLC/pubg/wiki
 
 // Global enums
 let actions = { none: 0, move: 1, rotate: 2, turn: 3, shoot: 4, jump: 5, eat: 6, spell: 7 },

@@ -1,7 +1,7 @@
 //
 //  Programmer Unknown's BattleGround
 //  Config
-//  Please read documentation at http://appcraft.pro/pubg/docs/
+//  Please read documentation at https://github.com/AppCraft-LLC/pubg/wiki
 //
 
       // List here all brains your want to fight in necessary order

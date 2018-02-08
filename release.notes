@@ -24,7 +24,7 @@ E.g. {condition = 10} means this object can be destroyed with one bullet.
 • Dynamites added.
 Use {dynamitesProbability} const of the config file to tune amount of dynamites.
 
-• Stars added. Each star has it's own effect. Please see http://appcraft.pro/pubg/docs/en/objects.html for more details.
+• Stars added. Each star has it's own effect. Please see https://github.com/AppCraft-LLC/pubg/wiki/Objects#stars for more details.
 {type} and {shape} values added to the object's structure so you can determine kind of each object.
 {objectTypes} structure contains the following values: {obstacle: 0, dynamite: 1, star: 2}. 
 {shape} can be used to determine type of a star, use {starShapes} with the following values: 
@@ -67,7 +67,7 @@ Now you can change enemies amount whithout restarting the game.
 • Const {creatureMaxBullets = 3} changed to {creatureMaxBullets = [3, 4, 5]}. So creatures have different capacity of bullets depending on its level now.
 It's important to adopt existing brains considering this change.
 
-• Spells added. See documentation for details (http://appcraft.pro/pubg/docs/ru/creature-actions.html).
+• Spells added. See documentation for details (https://github.com/AppCraft-LLC/pubg/wiki/Actions#rhino).
 
 • New {spell} event added.
 
